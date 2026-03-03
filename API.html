@@ -1,0 +1,2718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RezCentral API Gateway</title>
+<link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════
+   ROOT VARIABLES
+════════════════════════════════════════════ */
+:root {
+  --bg:        #040508;
+  --bg2:       #080b10;
+  --bg3:       #0d1117;
+  --surface:   #111620;
+  --surface2:  #161d2e;
+  --border:    #1e2840;
+  --border2:   #2a3654;
+  --text:      #e8edf5;
+  --text2:     #8a9ab8;
+  --text3:     #4a5a78;
+  --blue:      #3b82f6;
+  --blue2:     #1d4ed8;
+  --cyan:      #06b6d4;
+  --green:     #10b981;
+  --amber:     #f59e0b;
+  --red:       #ef4444;
+  --violet:    #8b5cf6;
+  --glow-blue: rgba(59,130,246,0.15);
+  --glow-cyan: rgba(6,182,212,0.12);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scanline overlay */
+body::before {
+  content:'';
+  position: fixed; inset: 0; z-index: 9999;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+}
+
+/* ════════════════════════════════════════════
+   LAYOUT SHELL
+════════════════════════════════════════════ */
+.shell { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 240px; flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: relative; overflow: hidden;
+}
+.sidebar::before {
+  content:'';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--blue), var(--cyan), transparent);
+}
+
+.sidebar-logo {
+  padding: 1.4rem 1.2rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.logo-mark {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 4px;
+}
+.logo-icon {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--blue), var(--cyan));
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 700; color: white;
+  flex-shrink: 0;
+}
+.logo-text {
+  font-family: 'Clash Display', sans-serif;
+  font-size: 1rem; font-weight: 700; letter-spacing: 0.05em;
+  color: var(--text);
+}
+.logo-sub {
+  font-size: 0.6rem; color: var(--text3); letter-spacing: 0.12em;
+  text-transform: uppercase; padding-left: 36px;
+}
+
+.sidebar-section {
+  padding: 0.8rem 0.6rem 0.2rem;
+}
+.sidebar-section-label {
+  font-size: 0.55rem; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--text3);
+  padding: 0 0.6rem; margin-bottom: 4px;
+}
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; border-radius: 6px;
+  cursor: pointer; font-size: 0.75rem;
+  color: var(--text2); transition: all 0.15s;
+  margin-bottom: 1px; position: relative;
+  white-space: nowrap;
+}
+.nav-item:hover { background: var(--surface); color: var(--text); }
+.nav-item.active {
+  background: var(--surface2);
+  color: var(--blue);
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+.nav-icon { font-size: 0.85rem; width: 18px; text-align: center; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto; background: var(--blue2); color: white;
+  font-size: 0.55rem; padding: 2px 6px; border-radius: 10px;
+  font-weight: 600;
+}
+.nav-badge.green { background: rgba(16,185,129,0.2); color: var(--green); }
+.nav-badge.amber { background: rgba(245,158,11,0.2); color: var(--amber); }
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 1rem 1.2rem;
+  border-top: 1px solid var(--border);
+}
+.admin-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px;
+  cursor: pointer;
+}
+.admin-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--violet), var(--blue));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 700; color: white;
+  flex-shrink: 0;
+}
+.admin-info { flex: 1; min-width: 0; }
+.admin-name { font-size: 0.7rem; font-weight: 600; color: var(--text); }
+.admin-role { font-size: 0.58rem; color: var(--text3); }
+.admin-caret { color: var(--text3); font-size: 0.6rem; }
+
+/* ── MAIN AREA ── */
+.main {
+  flex: 1; display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+.topbar {
+  height: 52px; border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex; align-items: center;
+  padding: 0 1.5rem; gap: 1rem;
+  flex-shrink: 0;
+}
+.topbar-title {
+  font-family: 'Clash Display', sans-serif;
+  font-size: 0.9rem; font-weight: 600; letter-spacing: 0.03em;
+}
+.topbar-path {
+  font-size: 0.65rem; color: var(--text3);
+}
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 0.8rem; }
+.status-dot {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.65rem; color: var(--green);
+  background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);
+  padding: 4px 10px; border-radius: 20px;
+}
+.status-dot::before {
+  content:''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+  animation: pulse-green 2s infinite;
+}
+@keyframes pulse-green {
+  0%,100% { opacity:1; box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(16,185,129,0); }
+}
+
+.content {
+  flex: 1; overflow-y: auto;
+  padding: 1.5rem;
+  scroll-behavior: smooth;
+}
+
+/* ════════════════════════════════════════════
+   VIEWS (pages)
+════════════════════════════════════════════ */
+.view { display: none; }
+.view.active { display: block; animation: fadeUp 0.3s ease; }
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* ════════════════════════════════════════════
+   CARDS & PANELS
+════════════════════════════════════════════ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.4rem;
+  position: relative; overflow: hidden;
+}
+.card::after {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 60%);
+}
+.card-glow-blue::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, transparent, var(--blue), transparent);
+}
+.card-glow-cyan::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+}
+.card-glow-green::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+}
+.card-glow-amber::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, transparent, var(--amber), transparent);
+}
+.card-glow-violet::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, transparent, var(--violet), transparent);
+}
+
+/* ════════════════════════════════════════════
+   TYPOGRAPHY
+════════════════════════════════════════════ */
+.page-heading {
+  font-family: 'Clash Display', sans-serif;
+  font-size: 1.6rem; font-weight: 700;
+  letter-spacing: -0.01em; margin-bottom: 0.2rem;
+}
+.page-heading em {
+  font-family: 'Fraunces', serif;
+  font-style: italic; font-weight: 300;
+  color: var(--cyan);
+}
+.page-sub {
+  font-size: 0.72rem; color: var(--text2);
+  margin-bottom: 1.5rem; line-height: 1.6;
+}
+.section-label {
+  font-size: 0.58rem; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--blue);
+  margin-bottom: 0.4rem;
+}
+
+/* ════════════════════════════════════════════
+   GRID LAYOUTS
+════════════════════════════════════════════ */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+.grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; }
+.grid-auto { display: grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap: 1rem; }
+
+/* ════════════════════════════════════════════
+   STAT TILES
+════════════════════════════════════════════ */
+.stat-tile {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 1.2rem 1.4rem;
+  display: flex; flex-direction: column; gap: 0.5rem;
+  position: relative; overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.stat-tile:hover { border-color: var(--border2); transform: translateY(-1px); }
+.stat-label { font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text3); }
+.stat-value {
+  font-family: 'Clash Display', sans-serif;
+  font-size: 1.8rem; font-weight: 700; line-height: 1;
+  color: var(--text);
+}
+.stat-value.blue { color: var(--blue); }
+.stat-value.cyan { color: var(--cyan); }
+.stat-value.green { color: var(--green); }
+.stat-value.amber { color: var(--amber); }
+.stat-value.violet { color: var(--violet); }
+.stat-delta {
+  font-size: 0.62rem; color: var(--green);
+  display: flex; align-items: center; gap: 4px;
+}
+.stat-delta.down { color: var(--red); }
+.stat-sparkline {
+  position: absolute; bottom: 0; right: 0; left: 0; height: 40px;
+  opacity: 0.3;
+}
+
+/* ════════════════════════════════════════════
+   FORM ELEMENTS
+════════════════════════════════════════════ */
+.form-group { margin-bottom: 1rem; }
+.form-label {
+  display: block; font-size: 0.62rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text2);
+  margin-bottom: 5px;
+}
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text); font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem; padding: 9px 12px;
+  border-radius: 6px; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+}
+.form-input::placeholder { color: var(--text3); }
+.form-textarea { resize: vertical; min-height: 80px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.form-hint { font-size: 0.6rem; color: var(--text3); margin-top: 4px; }
+
+/* ════════════════════════════════════════════
+   BUTTONS
+════════════════════════════════════════════ */
+.btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem; font-weight: 500;
+  border: none; cursor: pointer;
+  border-radius: 6px; transition: all 0.15s;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px; letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--blue), var(--blue2));
+  color: white;
+  box-shadow: 0 0 20px rgba(59,130,246,0.3);
+}
+.btn-primary:hover { box-shadow: 0 0 30px rgba(59,130,246,0.5); transform: translateY(-1px); }
+.btn-cyan {
+  background: linear-gradient(135deg, var(--cyan), #0891b2);
+  color: var(--bg); font-weight: 600;
+}
+.btn-cyan:hover { transform: translateY(-1px); box-shadow: 0 0 20px rgba(6,182,212,0.4); }
+.btn-green {
+  background: rgba(16,185,129,0.15); color: var(--green);
+  border: 1px solid rgba(16,185,129,0.3);
+}
+.btn-green:hover { background: rgba(16,185,129,0.25); }
+.btn-ghost {
+  background: transparent; color: var(--text2);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+.btn-red {
+  background: rgba(239,68,68,0.12); color: var(--red);
+  border: 1px solid rgba(239,68,68,0.25);
+}
+.btn-red:hover { background: rgba(239,68,68,0.2); }
+.btn-sm { padding: 6px 12px; font-size: 0.65rem; }
+.btn-full { width: 100%; justify-content: center; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+.btn-icon { padding: 7px; }
+
+/* ════════════════════════════════════════════
+   TABLE
+════════════════════════════════════════════ */
+.table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; }
+thead tr { background: var(--bg3); border-bottom: 1px solid var(--border); }
+th {
+  font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--text3); padding: 10px 14px; text-align: left;
+  font-weight: 500;
+}
+td { padding: 10px 14px; font-size: 0.72rem; color: var(--text2); border-bottom: 1px solid var(--border); }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr { transition: background 0.1s; }
+tbody tr:hover { background: var(--surface); }
+td .cell-primary { color: var(--text); font-weight: 500; }
+
+/* ════════════════════════════════════════════
+   BADGES / TAGS
+════════════════════════════════════════════ */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.6rem; padding: 3px 8px; border-radius: 20px;
+  font-weight: 500; letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.badge-green { background: rgba(16,185,129,0.12); color: var(--green); border: 1px solid rgba(16,185,129,0.2); }
+.badge-blue  { background: rgba(59,130,246,0.12); color: var(--blue); border: 1px solid rgba(59,130,246,0.2); }
+.badge-cyan  { background: rgba(6,182,212,0.12); color: var(--cyan); border: 1px solid rgba(6,182,212,0.2); }
+.badge-amber { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+.badge-red   { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+.badge-violet { background: rgba(139,92,246,0.12); color: var(--violet); border: 1px solid rgba(139,92,246,0.2); }
+.badge-gray  { background: rgba(100,116,139,0.12); color: #64748b; border: 1px solid rgba(100,116,139,0.2); }
+.badge::before { content:'●'; font-size: 0.45rem; }
+
+/* ════════════════════════════════════════════
+   XML / CODE VIEWER
+════════════════════════════════════════════ */
+.code-wrap {
+  background: #020408; border: 1px solid var(--border);
+  border-radius: 8px; overflow: hidden;
+}
+.code-header {
+  background: var(--bg3); border-bottom: 1px solid var(--border);
+  padding: 7px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.code-title { font-size: 0.6rem; color: var(--text3); letter-spacing: 0.1em; }
+.code-dots { display: flex; gap: 5px; }
+.code-dot { width: 8px; height: 8px; border-radius: 50%; }
+.code-body {
+  padding: 1rem; font-size: 0.68rem; line-height: 1.8;
+  overflow-x: auto; white-space: pre;
+  max-height: 320px; overflow-y: auto;
+  color: #e6edf3;
+}
+.xt { color: #7ee787; }   /* tag */
+.xa { color: #79c0ff; }   /* attr */
+.xv { color: #ffa657; }   /* value */
+.xc { color: #8b949e; font-style: italic; } /* comment */
+.xk { color: #ff7b72; }   /* keyword */
+
+/* ════════════════════════════════════════════
+   MODAL
+════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(6px);
+  display: none; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.modal-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  width: 100%; max-width: 560px;
+  max-height: 90vh; overflow-y: auto;
+  position: relative;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,130,246,0.1);
+  animation: slideUp 0.25s ease;
+}
+@keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+.modal-lg { max-width: 800px; }
+.modal-header {
+  padding: 1.4rem 1.6rem 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; justify-content: space-between;
+}
+.modal-title {
+  font-family: 'Clash Display', sans-serif;
+  font-size: 1.1rem; font-weight: 700;
+}
+.modal-sub { font-size: 0.68rem; color: var(--text2); margin-top: 2px; }
+.modal-close {
+  background: transparent; border: none; cursor: pointer;
+  color: var(--text3); font-size: 1.2rem; padding: 2px 6px;
+  border-radius: 4px; transition: color 0.15s;
+  flex-shrink: 0; margin-left: 1rem;
+}
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 1.4rem 1.6rem; }
+.modal-footer {
+  padding: 1rem 1.6rem;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 0.8rem;
+}
+
+/* ════════════════════════════════════════════
+   ONBOARDING STEPPER
+════════════════════════════════════════════ */
+.ob-steps {
+  display: flex; align-items: center; gap: 0;
+  margin-bottom: 2rem;
+}
+.ob-step {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.65rem; color: var(--text3);
+  transition: color 0.2s;
+}
+.ob-step.active { color: var(--blue); }
+.ob-step.done { color: var(--green); }
+.ob-step-num {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 1px solid currentColor;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; flex-shrink: 0;
+  transition: all 0.2s;
+}
+.ob-step.active .ob-step-num { background: var(--blue); border-color: var(--blue); color: white; }
+.ob-step.done .ob-step-num { background: var(--green); border-color: var(--green); color: var(--bg); }
+.ob-line { flex: 1; height: 1px; background: var(--border); margin: 0 8px; min-width: 20px; }
+.ob-line.done { background: var(--green); }
+
+/* ════════════════════════════════════════════
+   API KEY DISPLAY
+════════════════════════════════════════════ */
+.key-box {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 6px; padding: 10px 14px;
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 0.8rem;
+}
+.key-value {
+  flex: 1; font-size: 0.72rem; font-family: 'IBM Plex Mono', monospace;
+  color: var(--cyan); letter-spacing: 0.05em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.key-copy {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text3); font-size: 0.6rem;
+  padding: 4px 10px; border-radius: 4px; cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace; transition: all 0.15s;
+  white-space: nowrap;
+}
+.key-copy:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* ════════════════════════════════════════════
+   USAGE BAR
+════════════════════════════════════════════ */
+.usage-bar-wrap { margin-bottom: 0.5rem; }
+.usage-bar-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.usage-bar-label { font-size: 0.62rem; color: var(--text2); }
+.usage-bar-val { font-size: 0.62rem; color: var(--text); }
+.usage-bar-track {
+  height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden;
+}
+.usage-bar-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--blue), var(--cyan));
+  transition: width 0.5s ease;
+}
+.usage-bar-fill.warn { background: linear-gradient(90deg, var(--amber), #f97316); }
+.usage-bar-fill.over { background: linear-gradient(90deg, var(--red), #dc2626); }
+
+/* ════════════════════════════════════════════
+   LOG STREAM
+════════════════════════════════════════════ */
+.log-stream {
+  background: #020408; border: 1px solid var(--border);
+  border-radius: 8px; height: 260px; overflow-y: auto;
+  padding: 0.8rem;
+  font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem;
+  line-height: 1.8;
+}
+.log-line { display: flex; gap: 10px; align-items: flex-start; }
+.log-time { color: var(--text3); flex-shrink: 0; }
+.log-method { min-width: 55px; font-weight: 600; flex-shrink: 0; }
+.log-method.GET  { color: var(--cyan); }
+.log-method.POST { color: var(--green); }
+.log-method.ERR  { color: var(--red); }
+.log-path { color: var(--text2); flex: 1; }
+.log-status { flex-shrink: 0; }
+.log-ms { color: var(--text3); font-size: 0.58rem; flex-shrink: 0; }
+
+/* ════════════════════════════════════════════
+   MINI CHART (SVG sparklines)
+════════════════════════════════════════════ */
+.chart-wrap {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 1rem;
+}
+.chart-header { display: flex; justify-content: space-between; margin-bottom: 0.8rem; }
+.chart-title { font-size: 0.68rem; color: var(--text2); }
+.chart-val {
+  font-family: 'Clash Display', sans-serif;
+  font-size: 1.2rem; font-weight: 700; color: var(--text);
+}
+svg.mini-chart { width: 100%; height: 60px; }
+
+/* ════════════════════════════════════════════
+   PLAYGROUND
+════════════════════════════════════════════ */
+.pg-split { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; height: calc(100vh - 160px); }
+.pg-panel { display: flex; flex-direction: column; gap: 0.8rem; overflow-y: auto; }
+
+/* ════════════════════════════════════════════
+   TOGGLE / TABS
+════════════════════════════════════════════ */
+.tab-row { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+.tab-btn {
+  background: transparent; border: none; cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
+  color: var(--text3); padding: 8px 16px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s; white-space: nowrap;
+}
+.tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+.tab-btn:hover:not(.active) { color: var(--text2); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ════════════════════════════════════════════
+   NOTIFICATION TOAST
+════════════════════════════════════════════ */
+#toast-container {
+  position: fixed; bottom: 1.5rem; right: 1.5rem;
+  z-index: 9000; display: flex; flex-direction: column; gap: 0.6rem;
+}
+.toast {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 10px 16px;
+  font-size: 0.7rem; min-width: 260px;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  animation: slideRight 0.3s ease;
+}
+@keyframes slideRight { from { transform:translateX(20px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+.toast.success { border-color: rgba(16,185,129,0.3); }
+.toast.error   { border-color: rgba(239,68,68,0.3); }
+.toast.info    { border-color: rgba(59,130,246,0.3); }
+.toast-icon { font-size: 0.85rem; }
+
+/* ════════════════════════════════════════════
+   PLAN CARDS
+════════════════════════════════════════════ */
+.plan-card {
+  border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem;
+  cursor: pointer; transition: all 0.2s; position: relative;
+}
+.plan-card:hover { border-color: var(--border2); }
+.plan-card.selected { border-color: var(--blue); background: rgba(59,130,246,0.06); }
+.plan-card.selected::before {
+  content: '✓'; position: absolute; top: 10px; right: 12px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--blue); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem;
+}
+.plan-name {
+  font-family: 'Clash Display', sans-serif;
+  font-size: 0.9rem; font-weight: 700; margin-bottom: 4px;
+}
+.plan-price { font-size: 1.1rem; font-weight: 600; color: var(--cyan); margin-bottom: 6px; }
+.plan-calls { font-size: 0.62rem; color: var(--text3); margin-bottom: 0.8rem; }
+.plan-features { font-size: 0.62rem; color: var(--text2); line-height: 1.9; }
+.plan-feature::before { content: '→ '; color: var(--blue); }
+
+/* ════════════════════════════════════════════
+   SCROLLBAR
+════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ════════════════════════════════════════════
+   MISC
+════════════════════════════════════════════ */
+.divider { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-sm { gap: 0.5rem; }
+.gap-md { gap: 1rem; }
+.gap-lg { gap: 1.5rem; }
+.mt-sm { margin-top: 0.5rem; }
+.mt-md { margin-top: 1rem; }
+.mt-lg { margin-top: 1.5rem; }
+.mb-sm { margin-bottom: 0.5rem; }
+.mb-md { margin-bottom: 1rem; }
+.mb-lg { margin-bottom: 1.5rem; }
+.text-sm { font-size: 0.7rem; }
+.text-xs { font-size: 0.62rem; }
+.text-muted { color: var(--text3); }
+.text-blue { color: var(--blue); }
+.text-cyan { color: var(--cyan); }
+.text-green { color: var(--green); }
+.text-amber { color: var(--amber); }
+.text-red { color: var(--red); }
+.fw-bold { font-weight: 600; }
+.w-full { width: 100%; }
+.pointer { cursor: pointer; }
+
+.empty-state {
+  text-align: center; padding: 3rem 1rem;
+  color: var(--text3);
+}
+.empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.4; }
+.empty-state p { font-size: 0.72rem; }
+
+.highlight-box {
+  background: rgba(6,182,212,0.06);
+  border: 1px solid rgba(6,182,212,0.2);
+  border-radius: 8px; padding: 1rem 1.2rem;
+}
+.warn-box {
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: 8px; padding: 1rem 1.2rem;
+}
+.success-box {
+  background: rgba(16,185,129,0.06);
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 8px; padding: 1rem 1.2rem;
+}
+.separator { display: flex; align-items: center; gap: 0.8rem; margin: 1rem 0; }
+.separator span { font-size: 0.6rem; color: var(--text3); white-space: nowrap; }
+.separator::before,.separator::after { content:''; flex:1; height:1px; background: var(--border); }
+
+.loading-shimmer {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+.flip-card {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 1.4rem;
+}
+</style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<!-- ════════════════════════════════════════════
+     MAIN SHELL
+════════════════════════════════════════════ -->
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-icon">RC</div>
+        <span class="logo-text">RezCentral</span>
+      </div>
+      <div class="logo-sub">API Gateway Platform</div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Platform</div>
+      <div class="nav-item active" onclick="showView('dashboard')">
+        <span class="nav-icon">⬡</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="showView('partners')">
+        <span class="nav-icon">◈</span> Partners
+        <span class="nav-badge" id="partner-count-badge">3</span>
+      </div>
+      <div class="nav-item" onclick="showView('onboarding')">
+        <span class="nav-icon">✦</span> Onboard Partner
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">API</div>
+      <div class="nav-item" onclick="showView('playground')">
+        <span class="nav-icon">⌘</span> API Playground
+      </div>
+      <div class="nav-item" onclick="showView('endpoints')">
+        <span class="nav-icon">⊛</span> Endpoints
+      </div>
+      <div class="nav-item" onclick="showView('logs')">
+        <span class="nav-icon">≡</span> Live Logs
+        <span class="nav-badge green">LIVE</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Analytics</div>
+      <div class="nav-item" onclick="showView('usage')">
+        <span class="nav-icon">◎</span> Usage & Metering
+      </div>
+      <div class="nav-item" onclick="showView('security')">
+        <span class="nav-icon">⬡</span> Security
+        <span class="nav-badge amber">2</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Config</div>
+      <div class="nav-item" onclick="showView('tsd-config')">
+        <span class="nav-icon">⚙</span> TSD Credentials
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="admin-pill">
+        <div class="admin-avatar">SA</div>
+        <div class="admin-info">
+          <div class="admin-name">Super Admin</div>
+          <div class="admin-role">Platform Owner</div>
+        </div>
+        <span class="admin-caret">▾</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="topbar-title">Dashboard</div>
+        <div class="topbar-path text-xs text-muted" id="topbar-path">platform / overview</div>
+      </div>
+      <div class="topbar-right">
+        <div class="status-dot">API Operational</div>
+        <button class="btn btn-sm btn-ghost" onclick="showView('onboarding')">+ Onboard Partner</button>
+      </div>
+    </div>
+
+    <div class="content" id="main-content">
+
+      <!-- ════ VIEW: DASHBOARD ════ -->
+      <div class="view active" id="view-dashboard">
+        <div class="section-label">Platform Overview</div>
+        <h1 class="page-heading">API Gateway <em>Dashboard</em></h1>
+        <p class="page-sub">Real-time platform health, partner activity, and API throughput metrics.</p>
+
+        <div class="grid-4 mb-lg">
+          <div class="stat-tile card-glow-blue">
+            <div class="stat-label">Total API Calls (24h)</div>
+            <div class="stat-value blue" id="stat-calls">14,382</div>
+            <div class="stat-delta">↑ 12.4% vs yesterday</div>
+            <svg class="stat-sparkline" viewBox="0 0 100 30" preserveAspectRatio="none">
+              <polyline points="0,25 10,20 20,22 30,15 40,18 50,10 60,12 70,8 80,11 90,6 100,4" fill="none" stroke="rgba(59,130,246,0.6)" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="stat-tile card-glow-green">
+            <div class="stat-label">Active Partners</div>
+            <div class="stat-value green" id="stat-partners">3</div>
+            <div class="stat-delta">↑ 1 new this week</div>
+          </div>
+          <div class="stat-tile card-glow-cyan">
+            <div class="stat-label">Avg Response Time</div>
+            <div class="stat-value cyan">187<span style="font-size:0.9rem">ms</span></div>
+            <div class="stat-delta">↓ 8ms improvement</div>
+            <svg class="stat-sparkline" viewBox="0 0 100 30" preserveAspectRatio="none">
+              <polyline points="0,20 10,18 20,22 30,16 40,19 50,14 60,16 70,12 80,15 90,10 100,8" fill="none" stroke="rgba(6,182,212,0.6)" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="stat-tile card-glow-amber">
+            <div class="stat-label">Success Rate</div>
+            <div class="stat-value amber">99.2<span style="font-size:0.9rem">%</span></div>
+            <div class="stat-delta">↑ 0.3% this week</div>
+          </div>
+        </div>
+
+        <div class="grid-2 mb-lg">
+          <div class="card card-glow-blue">
+            <div class="flex justify-between items-center mb-md">
+              <div class="section-label" style="margin:0">API Calls — Last 7 Days</div>
+              <span class="badge badge-blue">Live</span>
+            </div>
+            <svg viewBox="0 0 320 80" style="width:100%;height:80px;">
+              <defs>
+                <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" style="stop-color:rgba(59,130,246,0.4)"/>
+                  <stop offset="100%" style="stop-color:rgba(59,130,246,0)"/>
+                </linearGradient>
+              </defs>
+              <polygon points="0,65 45,52 90,58 135,40 180,45 225,28 270,32 320,18 320,80 0,80" fill="url(#grad1)"/>
+              <polyline points="0,65 45,52 90,58 135,40 180,45 225,28 270,32 320,18" fill="none" stroke="var(--blue)" stroke-width="2"/>
+              <text x="0" y="78" font-size="7" fill="rgba(100,116,139,0.8)" font-family="IBM Plex Mono">Mon</text>
+              <text x="42" y="78" font-size="7" fill="rgba(100,116,139,0.8)" font-family="IBM Plex Mono">Tue</text>
+              <text x="87" y="78" font-size="7" fill="rgba(100,116,139,0.8)" font-family="IBM Plex Mono">Wed</text>
+              <text x="130" y="78" font-size="7" fill="rgba(100,116,139,0.8)" font-family="IBM Plex Mono">Thu</text>
+              <text x="175" y="78" font-size="7" fill="rgba(100,116,139,0.8)" font-family="IBM Plex Mono">Fri</text>
+              <text x="220" y="78" font-size="7" fill="rgba(100,116,139,0.8)" font-family="IBM Plex Mono">Sat</text>
+              <text x="265" y="78" font-size="7" fill="rgba(100,116,139,0.8)" font-family="IBM Plex Mono">Sun</text>
+            </svg>
+          </div>
+
+          <div class="card">
+            <div class="section-label mb-sm">Endpoint Distribution</div>
+            <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.5rem;">
+              <div class="usage-bar-wrap">
+                <div class="usage-bar-header"><span class="usage-bar-label">REQLOC — Location Search</span><span class="usage-bar-val">4,821 calls</span></div>
+                <div class="usage-bar-track"><div class="usage-bar-fill" style="width:78%"></div></div>
+              </div>
+              <div class="usage-bar-wrap">
+                <div class="usage-bar-header"><span class="usage-bar-label">REQRAT — Rate Query</span><span class="usage-bar-val">4,102 calls</span></div>
+                <div class="usage-bar-track"><div class="usage-bar-fill" style="width:66%"></div></div>
+              </div>
+              <div class="usage-bar-wrap">
+                <div class="usage-bar-header"><span class="usage-bar-label">ADDREZ — Create Reservation</span><span class="usage-bar-val">2,943 calls</span></div>
+                <div class="usage-bar-track"><div class="usage-bar-fill" style="width:47%"></div></div>
+              </div>
+              <div class="usage-bar-wrap">
+                <div class="usage-bar-header"><span class="usage-bar-label">REQBIL — Billing</span><span class="usage-bar-val">1,888 calls</span></div>
+                <div class="usage-bar-track"><div class="usage-bar-fill" style="width:30%"></div></div>
+              </div>
+              <div class="usage-bar-wrap">
+                <div class="usage-bar-header"><span class="usage-bar-label">REQCAN — Cancel</span><span class="usage-bar-val">628 calls</span></div>
+                <div class="usage-bar-track"><div class="usage-bar-fill" style="width:10%" class="warn"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent activity -->
+        <div class="card mb-lg">
+          <div class="flex justify-between items-center mb-md">
+            <div class="section-label" style="margin:0">Recent API Activity</div>
+            <button class="btn btn-sm btn-ghost" onclick="showView('logs')">View All Logs →</button>
+          </div>
+          <div class="log-stream" id="dashboard-log-stream">
+          </div>
+        </div>
+
+        <!-- Partner quick status -->
+        <div class="card">
+          <div class="flex justify-between items-center mb-md">
+            <div class="section-label" style="margin:0">Partner Status</div>
+            <button class="btn btn-sm btn-ghost" onclick="showView('partners')">Manage Partners →</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Partner</th><th>API Key</th><th>Plan</th>
+                <th>Calls (24h)</th><th>Quota</th><th>Status</th><th>TSD Mode</th>
+              </tr></thead>
+              <tbody id="dashboard-partner-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ VIEW: PARTNERS ════ -->
+      <div class="view" id="view-partners">
+        <div class="section-label">Partner Management</div>
+        <h1 class="page-heading">Registered <em>Partners</em></h1>
+        <p class="page-sub">Manage API access, credentials, and quotas for all onboarded partners.</p>
+
+        <div class="flex justify-between items-center mb-md">
+          <div class="flex gap-sm">
+            <input class="form-input" style="width:220px;" placeholder="Search partners..." id="partner-search" oninput="filterPartners()">
+            <select class="form-select" style="width:130px;" id="partner-filter-status" onchange="filterPartners()">
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="pending">Pending</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="showView('onboarding')">+ Onboard New Partner</button>
+        </div>
+
+        <div class="grid-auto" id="partner-cards-grid"></div>
+      </div>
+
+      <!-- ════ VIEW: ONBOARDING ════ -->
+      <div class="view" id="view-onboarding">
+        <div class="section-label">Partner Onboarding</div>
+        <h1 class="page-heading">Onboard <em>New Partner</em></h1>
+        <p class="page-sub">Secure 4-step onboarding: company registration → plan selection → credential review → API key issuance.</p>
+
+        <!-- Stepper -->
+        <div class="ob-steps mb-lg" id="ob-stepper">
+          <div class="ob-step active" id="ob-nav-1"><div class="ob-step-num">1</div>Company Info</div>
+          <div class="ob-line" id="ob-line-1"></div>
+          <div class="ob-step" id="ob-nav-2"><div class="ob-step-num">2</div>Plan & Limits</div>
+          <div class="ob-line" id="ob-line-2"></div>
+          <div class="ob-step" id="ob-nav-3"><div class="ob-step-num">3</div>TSD Credentials</div>
+          <div class="ob-line" id="ob-line-3"></div>
+          <div class="ob-step" id="ob-nav-4"><div class="ob-step-num">4</div>Review & Activate</div>
+        </div>
+
+        <!-- Step 1 -->
+        <div id="ob-step-1" class="card" style="max-width:640px;">
+          <div class="section-label mb-sm">Step 1 of 4</div>
+          <div style="font-family:'Clash Display',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:0.3rem;">Company Information</div>
+          <p class="text-xs text-muted mb-md">Basic details about the partner organization.</p>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Company Name *</label>
+              <input class="form-input" id="ob-company" placeholder="Acme Car Rentals Inc.">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Business Type *</label>
+              <select class="form-select" id="ob-biztype">
+                <option value="">Select type...</option>
+                <option>Car Rental Agency</option>
+                <option>Travel Booking Platform</option>
+                <option>Fleet Management</option>
+                <option>OTA / Aggregator</option>
+                <option>Corporate Travel</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Contact Name *</label>
+              <input class="form-input" id="ob-contact" placeholder="Jane Doe">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Contact Email *</label>
+              <input class="form-input" id="ob-email" type="email" placeholder="jane@company.com">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Phone</label>
+              <input class="form-input" id="ob-phone" placeholder="+1 555 000 0000">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Website</label>
+              <input class="form-input" id="ob-website" placeholder="https://company.com">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Use Case / Description</label>
+            <textarea class="form-textarea" id="ob-desc" placeholder="Describe how you plan to use the RezCentral API..."></textarea>
+          </div>
+          <div class="flex gap-sm">
+            <button class="btn btn-primary" onclick="obNext(1)">Continue → Plan Selection</button>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div id="ob-step-2" style="display:none;max-width:720px;">
+          <div class="section-label mb-sm">Step 2 of 4</div>
+          <div style="font-family:'Clash Display',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:0.3rem;">Select Plan & Rate Limits</div>
+          <p class="text-xs text-muted mb-md">Choose a plan that fits the partner's expected usage.</p>
+          <div class="grid-3 mb-md">
+            <div class="plan-card" onclick="selectPlan('starter',this)">
+              <div class="plan-name">Starter</div>
+              <div class="plan-price">Free</div>
+              <div class="plan-calls">1,000 calls / month</div>
+              <div class="plan-features">
+                <div class="plan-feature">REQLOC, REQRAT only</div>
+                <div class="plan-feature">Sandbox / Mock data</div>
+                <div class="plan-feature">Email support</div>
+              </div>
+            </div>
+            <div class="plan-card selected" onclick="selectPlan('pro',this)">
+              <div class="plan-name">Professional</div>
+              <div class="plan-price">$199/mo</div>
+              <div class="plan-calls">50,000 calls / month</div>
+              <div class="plan-features">
+                <div class="plan-feature">All endpoints</div>
+                <div class="plan-feature">Live TSD integration</div>
+                <div class="plan-feature">Priority support</div>
+                <div class="plan-feature">Usage analytics</div>
+              </div>
+            </div>
+            <div class="plan-card" onclick="selectPlan('enterprise',this)">
+              <div class="plan-name">Enterprise</div>
+              <div class="plan-price">Custom</div>
+              <div class="plan-calls">Unlimited calls</div>
+              <div class="plan-features">
+                <div class="plan-feature">All endpoints</div>
+                <div class="plan-feature">Dedicated infra</div>
+                <div class="plan-feature">SLA guaranteed</div>
+                <div class="plan-feature">Custom integrations</div>
+              </div>
+            </div>
+          </div>
+          <div class="card mb-md">
+            <div class="section-label mb-sm">Rate Limit Configuration</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Requests / Minute</label>
+                <input class="form-input" id="ob-rpm" value="60" type="number">
+                <div class="form-hint">Burst limit per minute</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Requests / Day</label>
+                <input class="form-input" id="ob-rpd" value="5000" type="number">
+                <div class="form-hint">Daily hard cap</div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Monthly Quota</label>
+                <input class="form-input" id="ob-quota" value="50000" type="number">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Allowed Endpoints</label>
+                <select class="form-select" id="ob-endpoints">
+                  <option value="all">All Endpoints</option>
+                  <option value="readonly">Read-Only (REQLOC, REQRAT, REQBIL)</option>
+                  <option value="booking">Booking Only</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="flex gap-sm">
+            <button class="btn btn-ghost" onclick="obBack(2)">← Back</button>
+            <button class="btn btn-primary" onclick="obNext(2)">Continue → TSD Credentials</button>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div id="ob-step-3" style="display:none;max-width:640px;">
+          <div class="section-label mb-sm">Step 3 of 4</div>
+          <div style="font-family:'Clash Display',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:0.3rem;">TSD Credentials (Optional)</div>
+          <p class="text-xs text-muted mb-md">If the partner has their own TSD CustomerNumber and Passcode, enter them here. Otherwise, the platform will use sandbox mock data until live credentials are provided.</p>
+
+          <div class="highlight-box mb-md">
+            <div class="text-xs text-cyan fw-bold mb-sm">ℹ Live vs. Sandbox Mode</div>
+            <p class="text-xs" style="color:var(--text2);line-height:1.7;">
+              When TSD credentials are provided, all API calls will be forwarded to <code style="color:var(--cyan);">weblink.tsdasp.net/requests/service.svc/</code> using the partner's CustomerNumber and Passcode. Without credentials, the platform returns realistic mock responses for development and testing.
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">TSD Customer Number</label>
+            <input class="form-input" id="ob-tsd-cust" placeholder="e.g. 12345 (leave blank for sandbox)">
+            <div class="form-hint">Provided by TSD upon account creation</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">TSD Passcode</label>
+            <input class="form-input" id="ob-tsd-pass" type="password" placeholder="••••••••••">
+            <div class="form-hint">Case-sensitive, provided by TSD</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Trading Partner Code</label>
+            <input class="form-input" id="ob-tsd-tp" placeholder="Web01" value="Web01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">TSD API Endpoint</label>
+            <input class="form-input" id="ob-tsd-url" value="https://weblink.tsdasp.net/requests/service.svc/">
+          </div>
+
+          <div class="warn-box mb-md">
+            <div class="text-xs text-amber fw-bold mb-sm">⚠ Security Note</div>
+            <p class="text-xs" style="color:var(--text2);line-height:1.7;">TSD credentials are encrypted at rest using AES-256 and never exposed via the API. All TSD requests are proxied through the gateway — partners only receive their RezCentral API key.</p>
+          </div>
+
+          <div class="flex gap-sm">
+            <button class="btn btn-ghost" onclick="obBack(3)">← Back</button>
+            <button class="btn btn-primary" onclick="obNext(3)">Continue → Review</button>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div id="ob-step-4" style="display:none;max-width:640px;">
+          <div class="section-label mb-sm">Step 4 of 4 — Review & Activate</div>
+          <div style="font-family:'Clash Display',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:0.3rem;">Confirm Partner Details</div>
+          <p class="text-xs text-muted mb-md">Review all details before activating the partner account.</p>
+
+          <div class="card mb-md" id="ob-review-content"></div>
+
+          <div class="form-group">
+            <label class="form-label">Internal Notes (Admin)</label>
+            <textarea class="form-textarea" id="ob-notes" placeholder="Internal notes about this partner..."></textarea>
+          </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.72rem;">
+              <input type="checkbox" id="ob-tos" style="accent-color:var(--blue);"> Partner has signed Master Service Agreement
+            </label>
+          </div>
+
+          <div class="flex gap-sm">
+            <button class="btn btn-ghost" onclick="obBack(4)">← Back</button>
+            <button class="btn btn-cyan" onclick="activatePartner()">⚡ Activate Partner & Generate API Key</button>
+          </div>
+        </div>
+
+        <!-- Step 5: Success -->
+        <div id="ob-step-success" style="display:none;max-width:640px;">
+          <div class="success-box mb-md" style="text-align:center;padding:2rem;">
+            <div style="font-size:2.5rem;margin-bottom:1rem;">✓</div>
+            <div style="font-family:'Clash Display',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:0.3rem;color:var(--green);">Partner Activated!</div>
+            <p class="text-xs" style="color:var(--text2);">The partner account has been created and API credentials issued.</p>
+          </div>
+          <div class="card mb-md" id="ob-success-content"></div>
+          <div class="flex gap-sm">
+            <button class="btn btn-primary" onclick="resetOnboarding()">+ Onboard Another Partner</button>
+            <button class="btn btn-ghost" onclick="showView('partners')">View All Partners →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ VIEW: API PLAYGROUND ════ -->
+      <div class="view" id="view-playground">
+        <div class="section-label">Developer Tools</div>
+        <h1 class="page-heading">API <em>Playground</em></h1>
+        <p class="page-sub">Test any endpoint live. Select a partner API key, choose a message type, configure parameters, and send.</p>
+
+        <div class="card mb-md">
+          <div class="flex gap-md items-center" style="flex-wrap:wrap;">
+            <div>
+              <label class="form-label">Partner API Key</label>
+              <select class="form-select" style="width:260px;" id="pg-partner-select" onchange="updatePgPartner()">
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Message Type</label>
+              <select class="form-select" style="width:160px;" id="pg-msg-type" onchange="updatePgForm()">
+                <option value="REQLOC">REQLOC</option>
+                <option value="REQRAT">REQRAT</option>
+                <option value="REQBIL">REQBIL</option>
+                <option value="ADDREZ">ADDREZ</option>
+                <option value="REQCAN">REQCAN</option>
+                <option value="REQEXT">REQEXT</option>
+                <option value="REQCLS">REQCLS</option>
+                <option value="REQPOL">REQPOL</option>
+              </select>
+            </div>
+            <div style="margin-top:auto;">
+              <button class="btn btn-cyan" onclick="sendPgRequest()">
+                ▶ Send Request
+              </button>
+            </div>
+            <div style="margin-top:auto;margin-left:auto;">
+              <span class="badge" id="pg-mode-badge">Loading...</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;height:calc(100vh - 300px);">
+          <div style="display:flex;flex-direction:column;gap:0.8rem;overflow-y:auto;">
+            <div class="card" style="flex-shrink:0;">
+              <div class="section-label mb-sm">Parameters</div>
+              <div id="pg-form-fields"></div>
+            </div>
+            <div>
+              <div class="flex justify-between items-center mb-sm">
+                <span class="text-xs text-muted">REQUEST XML</span>
+                <button class="btn btn-sm btn-ghost" onclick="copyPgReq()">Copy</button>
+              </div>
+              <div class="code-wrap">
+                <div class="code-header">
+                  <span class="code-title">OUTBOUND → weblink.tsdasp.net</span>
+                  <div class="code-dots">
+                    <div class="code-dot" style="background:#ff5f57"></div>
+                    <div class="code-dot" style="background:#febc2e"></div>
+                    <div class="code-dot" style="background:#28c840"></div>
+                  </div>
+                </div>
+                <div class="code-body" id="pg-req-xml"></div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.8rem;overflow-y:auto;">
+            <div class="card" style="flex-shrink:0;">
+              <div class="section-label mb-sm">Response Metadata</div>
+              <div class="flex gap-md" id="pg-meta">
+                <div><span class="text-xs text-muted">Status: </span><span class="badge badge-gray" id="pg-status-badge">—</span></div>
+                <div><span class="text-xs text-muted">Time: </span><span class="text-xs text-cyan" id="pg-time">—</span></div>
+                <div><span class="text-xs text-muted">Metered: </span><span class="text-xs text-amber" id="pg-metered">—</span></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between items-center mb-sm">
+                <span class="text-xs text-muted">RESPONSE XML</span>
+                <button class="btn btn-sm btn-ghost" onclick="copyPgRes()">Copy</button>
+              </div>
+              <div class="code-wrap">
+                <div class="code-header">
+                  <span class="code-title">INBOUND ← TSD RezCentral</span>
+                  <div class="code-dots">
+                    <div class="code-dot" style="background:#ff5f57"></div>
+                    <div class="code-dot" style="background:#febc2e"></div>
+                    <div class="code-dot" style="background:#28c840"></div>
+                  </div>
+                </div>
+                <div class="code-body" id="pg-res-xml"><span class="xc">// Response will appear here after request...</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ VIEW: ENDPOINTS ════ -->
+      <div class="view" id="view-endpoints">
+        <div class="section-label">API Reference</div>
+        <h1 class="page-heading">Endpoint <em>Catalog</em></h1>
+        <p class="page-sub">All available TSD RezCentral XML message types exposed through the RezCentral API Gateway.</p>
+        <div id="endpoint-list"></div>
+      </div>
+
+      <!-- ════ VIEW: LIVE LOGS ════ -->
+      <div class="view" id="view-logs">
+        <div class="section-label">Observability</div>
+        <h1 class="page-heading">Live API <em>Logs</em></h1>
+        <p class="page-sub">Real-time stream of all API requests across all partners. Auto-refreshing.</p>
+        <div class="flex gap-md items-center mb-md" style="flex-wrap:wrap;">
+          <select class="form-select" style="width:180px;" id="log-filter-partner">
+            <option value="">All Partners</option>
+          </select>
+          <select class="form-select" style="width:150px;" id="log-filter-endpoint">
+            <option value="">All Endpoints</option>
+            <option>REQLOC</option><option>REQRAT</option><option>REQBIL</option>
+            <option>ADDREZ</option><option>REQCAN</option><option>REQEXT</option>
+          </select>
+          <select class="form-select" style="width:130px;" id="log-filter-status">
+            <option value="">All Status</option>
+            <option value="200">200 OK</option>
+            <option value="401">401 Unauth</option>
+            <option value="429">429 Rate Limit</option>
+            <option value="500">500 Error</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="clearLogs()">Clear</button>
+          <div class="status-dot" style="margin-left:auto;">Streaming</div>
+        </div>
+        <div class="card">
+          <div class="log-stream" id="live-log-stream" style="height:420px;"></div>
+        </div>
+        <div class="card mt-md">
+          <div class="section-label mb-sm">Error Summary (Last 24h)</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Error Code</th><th>Message</th><th>Count</th><th>Last Seen</th><th>Partner</th></tr></thead>
+              <tbody id="error-summary-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ VIEW: USAGE & METERING ════ -->
+      <div class="view" id="view-usage">
+        <div class="section-label">Metering & Billing</div>
+        <h1 class="page-heading">Usage <em>Analytics</em></h1>
+        <p class="page-sub">Per-partner API consumption, quota tracking, and billing metrics.</p>
+        <div id="usage-partner-list"></div>
+      </div>
+
+      <!-- ════ VIEW: SECURITY ════ -->
+      <div class="view" id="view-security">
+        <div class="section-label">Access Control</div>
+        <h1 class="page-heading">Security <em>Center</em></h1>
+        <p class="page-sub">API key management, IP whitelisting, anomaly detection, and audit trail.</p>
+
+        <div class="grid-2 mb-lg">
+          <div class="card card-glow-amber">
+            <div class="section-label mb-sm">Active Alerts</div>
+            <div id="security-alerts"></div>
+          </div>
+          <div class="card">
+            <div class="section-label mb-sm">IP Whitelist</div>
+            <div class="form-group">
+              <label class="form-label">Add IP / CIDR</label>
+              <div class="flex gap-sm">
+                <input class="form-input" id="new-ip" placeholder="192.168.1.0/24">
+                <button class="btn btn-green btn-sm" onclick="addIP()">Add</button>
+              </div>
+            </div>
+            <div id="ip-list" style="display:flex;flex-direction:column;gap:4px;"></div>
+          </div>
+        </div>
+
+        <div class="card mb-lg">
+          <div class="section-label mb-sm">Audit Trail</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Timestamp</th><th>Actor</th><th>Action</th><th>Target</th><th>IP</th></tr></thead>
+              <tbody id="audit-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ VIEW: TSD CONFIG ════ -->
+      <div class="view" id="view-tsd-config">
+        <div class="section-label">Integration Settings</div>
+        <h1 class="page-heading">TSD <em>Configuration</em></h1>
+        <p class="page-sub">Manage the global TSD connection used as fallback, and per-partner credential overrides.</p>
+
+        <div class="grid-2">
+          <div>
+            <div class="card mb-md card-glow-cyan">
+              <div class="section-label mb-sm">Global TSD Gateway</div>
+              <div class="form-group">
+                <label class="form-label">Default TSD Endpoint</label>
+                <input class="form-input" id="global-tsd-url" value="https://weblink.tsdasp.net/requests/service.svc/">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Global Customer Number (Fallback)</label>
+                <input class="form-input" id="global-cust" placeholder="Leave blank to always use partner credentials">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Global Passcode (Fallback)</label>
+                <input class="form-input" type="password" id="global-pass" placeholder="••••••••">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Connection Timeout (ms)</label>
+                <input class="form-input" id="global-timeout" value="10000" type="number">
+              </div>
+              <button class="btn btn-primary" onclick="testGlobalTSD()">Test Connection</button>
+              <span id="tsd-test-result" class="text-xs ml-sm" style="margin-left:1rem;"></span>
+            </div>
+
+            <div class="card">
+              <div class="section-label mb-sm">Sandbox Mode Settings</div>
+              <p class="text-xs text-muted mb-md">Configure mock data behavior for partners without TSD credentials.</p>
+              <div class="form-group">
+                <label class="form-label">Mock Response Delay (ms)</label>
+                <input class="form-input" id="mock-delay" value="800" type="number">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Mock Error Rate (%)</label>
+                <input class="form-input" id="mock-err-rate" value="2" type="number">
+              </div>
+              <button class="btn btn-ghost" onclick="saveMockConfig()">Save Sandbox Config</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-label mb-sm">Per-Partner TSD Credentials</div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Partner</th><th>Customer #</th><th>Mode</th><th>Last Tested</th><th>Action</th></tr></thead>
+                <tbody id="tsd-creds-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- ════════════════════════════════════════════
+     PARTNER DETAIL MODAL
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="partner-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="pm-title">Partner Details</div>
+        <div class="modal-sub" id="pm-sub">—</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('partner-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tab-row">
+        <button class="tab-btn active" onclick="switchTab('pm','overview',this)">Overview</button>
+        <button class="tab-btn" onclick="switchTab('pm','credentials',this)">Credentials</button>
+        <button class="tab-btn" onclick="switchTab('pm','usage',this)">Usage</button>
+        <button class="tab-btn" onclick="switchTab('pm','tsd',this)">TSD Config</button>
+        <button class="tab-btn" onclick="switchTab('pm','danger',this)">Danger Zone</button>
+      </div>
+      <div id="pm-tab-overview" class="tab-panel active"></div>
+      <div id="pm-tab-credentials" class="tab-panel"></div>
+      <div id="pm-tab-usage" class="tab-panel"></div>
+      <div id="pm-tab-tsd" class="tab-panel"></div>
+      <div id="pm-tab-danger" class="tab-panel"></div>
+    </div>
+  </div>
+</div>
+
+<!-- KEY REVEAL MODAL -->
+<div class="modal-overlay" id="key-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">🔑 API Key Issued</div>
+        <div class="modal-sub">Copy and store this key securely — it won't be shown again.</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('key-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="warn-box mb-md">
+        <div class="text-xs text-amber fw-bold">⚠ One-time display</div>
+        <p class="text-xs" style="color:var(--text2);margin-top:4px;">This is the only time the full API key will be shown. Store it in a secure vault immediately.</p>
+      </div>
+      <label class="form-label">Full API Key</label>
+      <div class="key-box">
+        <span class="key-value" id="key-modal-value"></span>
+        <button class="key-copy" onclick="copyKey('key-modal-value')">Copy</button>
+      </div>
+      <label class="form-label mt-md">API Base URL</label>
+      <div class="key-box">
+        <span class="key-value">https://api.rezcentral.io/v1/</span>
+        <button class="key-copy" onclick="copyText('https://api.rezcentral.io/v1/')">Copy</button>
+      </div>
+      <div class="highlight-box mt-md">
+        <div class="text-xs fw-bold text-cyan mb-sm">Quick Start</div>
+        <div class="code-body" style="font-size:0.62rem;max-height:120px;background:transparent;padding:0;">
+POST https://api.rezcentral.io/v1/xml
+Headers:
+  X-API-Key: &lt;your-api-key&gt;
+  Content-Type: application/xml
+Body: &lt;TRNXML&gt;...&lt;/TRNXML&gt;</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal('key-modal');showView('partners');">Go to Partners →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════
+   DATA STORE
+══════════════════════════════════════════════════ */
+const DB = {
+  partners: [
+    {
+      id: 'prt_001',
+      company: 'Velocity Car Hire',
+      biztype: 'Car Rental Agency',
+      contact: 'Alex Martin',
+      email: 'alex@velocitycar.com',
+      phone: '+1 (415) 555-0121',
+      website: 'https://velocitycar.com',
+      plan: 'pro',
+      status: 'active',
+      apiKey: 'rc_live_v1_7f3a2b8c9d4e5f6a1b2c3d4e5f6a7b8c',
+      apiKeyMasked: 'rc_live_v1_7f3a2b8c...7b8c',
+      rpm: 120, rpd: 10000, quota: 50000,
+      callsToday: 4821, callsMonth: 31240,
+      tsdCustomer: '41001', tsdPasscode: '••••••••', tsdMode: 'live',
+      tsdUrl: 'https://weblink.tsdasp.net/requests/service.svc/',
+      createdAt: '2025-11-14',
+      lastCall: '2 min ago',
+      notes: 'Key enterprise partner, direct TSD integration.',
+      ipWhitelist: ['52.14.88.100', '52.14.88.101'],
+    },
+    {
+      id: 'prt_002',
+      company: 'TravelNest OTA',
+      biztype: 'OTA / Aggregator',
+      contact: 'Priya Shah',
+      email: 'priya@travelnest.io',
+      phone: '+1 (212) 555-0288',
+      website: 'https://travelnest.io',
+      plan: 'enterprise',
+      status: 'active',
+      apiKey: 'rc_live_v1_a1b2c3d4e5f67890abcdef1234567890',
+      apiKeyMasked: 'rc_live_v1_a1b2c3d4...7890',
+      rpm: 300, rpd: 50000, quota: 0,
+      callsToday: 7203, callsMonth: 88420,
+      tsdCustomer: '41002', tsdPasscode: '••••••••', tsdMode: 'live',
+      tsdUrl: 'https://weblink.tsdasp.net/requests/service.svc/',
+      createdAt: '2025-10-02',
+      lastCall: '5 sec ago',
+      notes: 'High-volume OTA, SLA agreement in place.',
+      ipWhitelist: ['104.21.0.0/16'],
+    },
+    {
+      id: 'prt_003',
+      company: 'DriveTest Labs',
+      biztype: 'Travel Booking Platform',
+      contact: 'Marcus Lee',
+      email: 'marcus@drivetestlabs.dev',
+      phone: '+1 (628) 555-0099',
+      website: 'https://drivetestlabs.dev',
+      plan: 'starter',
+      status: 'active',
+      apiKey: 'rc_test_v1_d3v4k3y9f0r1t3st1ng0nly00000000',
+      apiKeyMasked: 'rc_test_v1_d3v4k3y9...0000',
+      rpm: 60, rpd: 1000, quota: 1000,
+      callsToday: 358, callsMonth: 890,
+      tsdCustomer: '', tsdPasscode: '', tsdMode: 'sandbox',
+      tsdUrl: '',
+      createdAt: '2026-01-28',
+      lastCall: '1 hr ago',
+      notes: 'Developer sandbox account.',
+      ipWhitelist: [],
+    }
+  ],
+  logs: [],
+  ipWhitelist: ['10.0.0.0/8', '203.0.113.42'],
+  mockDelay: 800,
+  mockErrRate: 2,
+  globalTsdUrl: 'https://weblink.tsdasp.net/requests/service.svc/',
+  obState: {
+    step: 1, plan: 'pro',
+    company:'', biztype:'', contact:'', email:'', phone:'', website:'', desc:'',
+    rpm:60, rpd:5000, quota:50000, endpoints:'all',
+    tsdCust:'', tsdPass:'', tsdTp:'Web01', tsdUrl:'https://weblink.tsdasp.net/requests/service.svc/',
+    notes:''
+  }
+};
+
+/* ══════════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════════ */
+const VIEW_META = {
+  dashboard:  { title: 'Dashboard',         path: 'platform / overview' },
+  partners:   { title: 'Partners',           path: 'platform / partners' },
+  onboarding: { title: 'Onboard Partner',    path: 'platform / partners / onboard' },
+  playground: { title: 'API Playground',     path: 'api / playground' },
+  endpoints:  { title: 'Endpoint Catalog',   path: 'api / endpoints' },
+  logs:       { title: 'Live Logs',          path: 'api / observability / logs' },
+  usage:      { title: 'Usage & Metering',   path: 'analytics / usage' },
+  security:   { title: 'Security Center',    path: 'platform / security' },
+  'tsd-config': { title: 'TSD Configuration', path: 'config / tsd-credentials' }
+};
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  const el = document.getElementById('view-' + name);
+  if (el) el.classList.add('active');
+
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'"+name+"'"))
+      n.classList.add('active');
+  });
+
+  const meta = VIEW_META[name] || { title: name, path: name };
+  document.getElementById('topbar-title').textContent = meta.title;
+  document.getElementById('topbar-path').textContent = meta.path;
+
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'partners') renderPartners();
+  if (name === 'playground') initPlayground();
+  if (name === 'endpoints') renderEndpoints();
+  if (name === 'logs') renderLogs();
+  if (name === 'usage') renderUsage();
+  if (name === 'security') renderSecurity();
+  if (name === 'tsd-config') renderTsdConfig();
+}
+
+/* ══════════════════════════════════════════════════
+   XML HELPERS
+══════════════════════════════════════════════════ */
+function colorXml(xml) {
+  return xml
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/&lt;(!--.*?--)/g,'<span class="xc">&lt;$1')
+    .replace(/(--&gt;)/g,'$1</span>')
+    .replace(/&lt;(\/?[A-Za-z][^\s&]*?)(&gt;|(?=\s))/g,'<span class="xt">&lt;$1</span>$2')
+    .replace(/&gt;([^&<\n]+)/g, '&gt;<span class="xv">$1</span>')
+    .replace(/"([^"]*)"/g,'"<span class="xa">$1</span>"');
+}
+
+function fmtDT(d) {
+  const p = n => String(n).padStart(2,'0');
+  return `${p(d.getMonth()+1)}${p(d.getDate())}${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())} ${d.getHours()>=12?'PM':'AM'}`;
+}
+function nowStr() {
+  const d=new Date();
+  const p=n=>String(n).padStart(2,'0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+function xmlHeader(cust, pass, senderID='WEB01', tp='Web01') {
+  const d = new Date();
+  return `<TRNXML Version="1.0.0">
+  <Dategmtime TimeZone="ET">${d.toLocaleDateString('en-US')} ${d.toLocaleTimeString('en-US')}</Dategmtime>
+  <Sender><SenderID>${senderID}</SenderID></Sender>
+  <Recipient><RecipientID>TRN</RecipientID></Recipient>
+  <TradingPartner><TradingPartnerCode>${tp}</TradingPartnerCode></TradingPartner>
+  <Customer>
+    <CustomerNumber>${cust}</CustomerNumber>
+    <Passcode>${pass}</Passcode>
+  </Customer>`;
+}
+
+/* ══════════════════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════════════════ */
+function renderDashboard() {
+  // Partner badge
+  document.getElementById('partner-count-badge').textContent = DB.partners.filter(p=>p.status==='active').length;
+  document.getElementById('stat-partners').textContent = DB.partners.filter(p=>p.status==='active').length;
+
+  // Dashboard partner table
+  const tbody = document.getElementById('dashboard-partner-table');
+  tbody.innerHTML = DB.partners.map(p => `
+    <tr onclick="openPartner('${p.id}')" style="cursor:pointer;">
+      <td><div class="cell-primary">${p.company}</div><div class="text-xs text-muted">${p.biztype}</div></td>
+      <td><span class="text-xs text-cyan">${p.apiKeyMasked}</span></td>
+      <td><span class="badge badge-${p.plan==='enterprise'?'violet':p.plan==='pro'?'blue':'gray'}">${p.plan}</span></td>
+      <td><span class="text-green fw-bold">${p.callsToday.toLocaleString()}</span></td>
+      <td>${p.quota > 0 ? `<div class="usage-bar-track" style="width:80px;"><div class="usage-bar-fill" style="width:${Math.min(100,Math.round(p.callsMonth/p.quota*100))}%"></div></div>` : '<span class="text-xs text-muted">Unlimited</span>'}</td>
+      <td><span class="badge badge-${p.status==='active'?'green':'amber'}">${p.status}</span></td>
+      <td><span class="badge badge-${p.tsdMode==='live'?'cyan':'amber'}">${p.tsdMode}</span></td>
+    </tr>
+  `).join('');
+
+  // Log stream
+  renderLogStream('dashboard-log-stream', 12);
+}
+
+/* ══════════════════════════════════════════════════
+   PARTNERS VIEW
+══════════════════════════════════════════════════ */
+function renderPartners(filter='') {
+  const grid = document.getElementById('partner-cards-grid');
+  const list = DB.partners.filter(p =>
+    (!filter || p.company.toLowerCase().includes(filter.toLowerCase()) || p.email.toLowerCase().includes(filter.toLowerCase()))
+  );
+
+  grid.innerHTML = list.length === 0 ? `<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">◈</div><p>No partners found.</p></div>` :
+  list.map(p => {
+    const pct = p.quota > 0 ? Math.min(100,Math.round(p.callsMonth/p.quota*100)) : 0;
+    return `
+    <div class="card pointer" style="transition:all 0.2s;" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'" onclick="openPartner('${p.id}')">
+      <div class="flex justify-between items-center mb-sm">
+        <div style="font-family:'Clash Display',sans-serif;font-size:1rem;font-weight:700;">${p.company}</div>
+        <span class="badge badge-${p.status==='active'?'green':'amber'}">${p.status}</span>
+      </div>
+      <div class="text-xs text-muted mb-md">${p.biztype} · ${p.contact}</div>
+      <div class="key-box" style="margin-bottom:0.8rem;">
+        <span class="key-value">${p.apiKeyMasked}</span>
+        <span class="badge badge-${p.tsdMode==='live'?'cyan':'amber'}" style="margin-left:auto;">${p.tsdMode}</span>
+      </div>
+      <div class="flex gap-sm mb-md" style="flex-wrap:wrap;">
+        <span class="badge badge-${p.plan==='enterprise'?'violet':p.plan==='pro'?'blue':'gray'}">${p.plan}</span>
+        <span class="text-xs text-muted">${p.callsToday.toLocaleString()} calls today</span>
+        <span class="text-xs text-muted" style="margin-left:auto;">Last: ${p.lastCall}</span>
+      </div>
+      ${p.quota > 0 ? `<div class="usage-bar-wrap">
+        <div class="usage-bar-header"><span class="usage-bar-label">Monthly Quota</span><span class="usage-bar-val">${p.callsMonth.toLocaleString()} / ${p.quota.toLocaleString()}</span></div>
+        <div class="usage-bar-track"><div class="usage-bar-fill ${pct>80?'warn':''} ${pct>=100?'over':''}" style="width:${pct}%"></div></div>
+      </div>` : `<div class="text-xs text-muted">Unlimited plan · ${p.callsMonth.toLocaleString()} calls this month</div>`}
+    </div>`;
+  }).join('');
+}
+
+function filterPartners() {
+  const q = document.getElementById('partner-search').value;
+  renderPartners(q);
+}
+
+/* ══════════════════════════════════════════════════
+   PARTNER MODAL
+══════════════════════════════════════════════════ */
+function openPartner(id) {
+  const p = DB.partners.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('pm-title').textContent = p.company;
+  document.getElementById('pm-sub').textContent = `${p.biztype} · ${p.email} · ID: ${p.id}`;
+
+  // Overview tab
+  document.getElementById('pm-tab-overview').innerHTML = `
+    <div class="grid-2 mb-md">
+      <div><label class="form-label">Company</label><div class="text-sm">${p.company}</div></div>
+      <div><label class="form-label">Business Type</label><div class="text-sm">${p.biztype}</div></div>
+      <div><label class="form-label">Contact</label><div class="text-sm">${p.contact}</div></div>
+      <div><label class="form-label">Email</label><div class="text-sm text-cyan">${p.email}</div></div>
+      <div><label class="form-label">Phone</label><div class="text-sm">${p.phone||'—'}</div></div>
+      <div><label class="form-label">Website</label><div class="text-sm">${p.website||'—'}</div></div>
+      <div><label class="form-label">Plan</label><span class="badge badge-${p.plan==='enterprise'?'violet':p.plan==='pro'?'blue':'gray'}">${p.plan}</span></div>
+      <div><label class="form-label">Status</label><span class="badge badge-${p.status==='active'?'green':'amber'}">${p.status}</span></div>
+      <div><label class="form-label">Created</label><div class="text-sm">${p.createdAt}</div></div>
+      <div><label class="form-label">Rate Limits</label><div class="text-sm">${p.rpm} req/min · ${p.rpd.toLocaleString()} req/day</div></div>
+    </div>
+    ${p.notes ? `<div class="highlight-box"><div class="text-xs fw-bold text-cyan mb-sm">Notes</div><p class="text-xs">${p.notes}</p></div>` : ''}
+  `;
+
+  // Credentials tab
+  document.getElementById('pm-tab-credentials').innerHTML = `
+    <div class="warn-box mb-md">
+      <p class="text-xs text-amber">API keys are shown masked. Use rotate to generate a new key.</p>
+    </div>
+    <label class="form-label">API Key</label>
+    <div class="key-box mb-md">
+      <span class="key-value">${p.apiKeyMasked}</span>
+      <button class="key-copy" onclick="rotateKey('${p.id}')">Rotate Key</button>
+    </div>
+    <label class="form-label">Allowed Endpoints</label>
+    <div class="flex gap-sm mb-md" style="flex-wrap:wrap;">
+      ${['REQLOC','REQRAT','REQBIL','ADDREZ','REQCAN','REQEXT','REQCLS','REQPOL'].map(e=>`<span class="badge badge-blue">${e}</span>`).join('')}
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Rate Limit (req/min)</label>
+        <input class="form-input" value="${p.rpm}" id="edit-rpm-${p.id}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Daily Cap (req/day)</label>
+        <input class="form-input" value="${p.rpd}" id="edit-rpd-${p.id}">
+      </div>
+    </div>
+    <button class="btn btn-green btn-sm" onclick="savePartnerLimits('${p.id}')">Save Limits</button>
+  `;
+
+  // Usage tab
+  const pct = p.quota > 0 ? Math.min(100,Math.round(p.callsMonth/p.quota*100)) : 0;
+  document.getElementById('pm-tab-usage').innerHTML = `
+    <div class="grid-3 mb-md">
+      <div class="stat-tile"><div class="stat-label">Calls Today</div><div class="stat-value blue">${p.callsToday.toLocaleString()}</div></div>
+      <div class="stat-tile"><div class="stat-label">Calls This Month</div><div class="stat-value cyan">${p.callsMonth.toLocaleString()}</div></div>
+      <div class="stat-tile"><div class="stat-label">Monthly Quota</div><div class="stat-value ${pct>80?'amber':'green'}">${p.quota > 0 ? p.quota.toLocaleString() : '∞'}</div></div>
+    </div>
+    ${p.quota > 0 ? `<div class="usage-bar-wrap mb-md">
+      <div class="usage-bar-header"><span class="usage-bar-label">Monthly Usage</span><span class="usage-bar-val">${pct}% used</span></div>
+      <div class="usage-bar-track"><div class="usage-bar-fill ${pct>80?'warn':''}" style="height:10px;width:${pct}%;border-radius:5px;"></div></div>
+    </div>` : ''}
+    <div class="section-label mb-sm">Endpoint Breakdown (Today)</div>
+    <div style="display:flex;flex-direction:column;gap:0.4rem;">
+      ${[['REQLOC',32],['REQRAT',28],['ADDREZ',20],['REQBIL',12],['REQCAN',8]].map(([e,pct2])=>`
+      <div class="usage-bar-wrap">
+        <div class="usage-bar-header"><span class="usage-bar-label">${e}</span><span class="usage-bar-val">${Math.round(p.callsToday*pct2/100)} calls</span></div>
+        <div class="usage-bar-track"><div class="usage-bar-fill" style="width:${pct2}%"></div></div>
+      </div>`).join('')}
+    </div>
+  `;
+
+  // TSD tab
+  document.getElementById('pm-tab-tsd').innerHTML = `
+    <div class="highlight-box mb-md">
+      <div class="text-xs fw-bold text-cyan">Mode: <span class="badge badge-${p.tsdMode==='live'?'cyan':'amber'} " style="margin-left:4px;">${p.tsdMode.toUpperCase()}</span></div>
+      <p class="text-xs mt-sm" style="color:var(--text2);">${p.tsdMode==='live' ? 'Live TSD credentials are configured. All requests are proxied to the TSD endpoint.' : 'No TSD credentials. Using sandbox mock data for all responses.'}</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">TSD Customer Number</label>
+      <input class="form-input" id="tsd-cust-${p.id}" value="${p.tsdCustomer}" placeholder="Enter TSD customer number">
+    </div>
+    <div class="form-group">
+      <label class="form-label">TSD Passcode</label>
+      <input class="form-input" type="password" id="tsd-pass-${p.id}" value="${p.tsdPasscode!=='••••••••'?p.tsdPasscode:''}" placeholder="Enter TSD passcode">
+    </div>
+    <div class="form-group">
+      <label class="form-label">TSD Endpoint URL</label>
+      <input class="form-input" id="tsd-url-${p.id}" value="${p.tsdUrl||'https://weblink.tsdasp.net/requests/service.svc/'}">
+    </div>
+    <div class="flex gap-sm">
+      <button class="btn btn-cyan btn-sm" onclick="saveTsdCreds('${p.id}')">Save & Test Connection</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearTsdCreds('${p.id}')">Switch to Sandbox</button>
+    </div>
+    <div id="tsd-save-result-${p.id}" class="mt-sm"></div>
+  `;
+
+  // Danger zone
+  document.getElementById('pm-tab-danger').innerHTML = `
+    <div class="warn-box mb-md">
+      <div class="text-xs text-amber fw-bold">⚠ Danger Zone</div>
+      <p class="text-xs mt-sm" style="color:var(--text2);">Actions here are irreversible or may disrupt the partner's integration.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.8rem;">
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+        <div><div class="text-sm fw-bold">Suspend Partner</div><div class="text-xs text-muted">Immediately revoke all API access.</div></div>
+        <button class="btn btn-red btn-sm" onclick="suspendPartner('${p.id}')">Suspend</button>
+      </div>
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+        <div><div class="text-sm fw-bold">Rotate API Key</div><div class="text-xs text-muted">Invalidate current key and issue new one.</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="rotateKey('${p.id}')">Rotate</button>
+      </div>
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+        <div><div class="text-sm fw-bold">Delete Partner</div><div class="text-xs text-muted">Permanently remove partner and all data.</div></div>
+        <button class="btn btn-red btn-sm" onclick="deletePartner('${p.id}')">Delete</button>
+      </div>
+    </div>
+  `;
+
+  switchTabDirect('pm','overview');
+  document.getElementById('partner-modal').classList.add('open');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function switchTab(prefix, name, btn) {
+  document.querySelectorAll(`#pm-tab-${prefix}`).forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById(`${prefix}-tab-${name}`);
+  if (panel) panel.classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+function switchTabDirect(prefix, name) {
+  document.querySelectorAll('[id^="'+prefix+'-tab-"]').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById(`${prefix}-tab-${name}`);
+  if (panel) panel.classList.add('active');
+}
+
+/* ══════════════════════════════════════════════════
+   PARTNER ACTIONS
+══════════════════════════════════════════════════ */
+function rotateKey(id) {
+  const p = DB.partners.find(x=>x.id===id);
+  if (!p) return;
+  const newKey = 'rc_'+(p.tsdMode==='live'?'live':'test')+'_v1_'+[...Array(32)].map(()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
+  p.apiKey = newKey;
+  p.apiKeyMasked = newKey.slice(0,18)+'...'+newKey.slice(-4);
+  toast('API key rotated for '+p.company, 'success');
+  addAuditEntry('Admin', `Rotated API key for ${p.company}`, p.id, '10.0.0.1');
+  closeModal('partner-modal');
+}
+
+function suspendPartner(id) {
+  const p = DB.partners.find(x=>x.id===id);
+  if (!p) return;
+  p.status = 'suspended';
+  toast(`Partner ${p.company} suspended`, 'error');
+  addAuditEntry('Admin', `Suspended partner ${p.company}`, p.id, '10.0.0.1');
+  closeModal('partner-modal');
+  renderPartners();
+  renderDashboard();
+}
+
+function deletePartner(id) {
+  const idx = DB.partners.findIndex(x=>x.id===id);
+  if (idx<0) return;
+  if (!confirm('Delete this partner permanently?')) return;
+  const name = DB.partners[idx].company;
+  DB.partners.splice(idx,1);
+  toast(`Partner ${name} deleted`, 'error');
+  closeModal('partner-modal');
+  renderPartners();
+  renderDashboard();
+}
+
+function savePartnerLimits(id) {
+  const p = DB.partners.find(x=>x.id===id);
+  const rpm = parseInt(document.getElementById(`edit-rpm-${id}`)?.value||p.rpm);
+  const rpd = parseInt(document.getElementById(`edit-rpd-${id}`)?.value||p.rpd);
+  p.rpm = rpm; p.rpd = rpd;
+  toast('Rate limits saved for '+p.company, 'success');
+}
+
+async function saveTsdCreds(id) {
+  const p = DB.partners.find(x=>x.id===id);
+  const cust = document.getElementById(`tsd-cust-${id}`)?.value.trim();
+  const pass = document.getElementById(`tsd-pass-${id}`)?.value.trim();
+  const url = document.getElementById(`tsd-url-${id}`)?.value.trim();
+  const el = document.getElementById(`tsd-save-result-${id}`);
+
+  el.innerHTML = '<span class="text-xs text-muted">Testing connection...</span>';
+  await sleep(1200);
+
+  if (cust && pass) {
+    p.tsdCustomer = cust;
+    p.tsdPasscode = '••••••••';
+    p.tsdMode = 'live';
+    p.tsdUrl = url;
+    el.innerHTML = '<span class="badge badge-green">✓ Connection successful — Live mode active</span>';
+    toast(`TSD credentials saved for ${p.company} — Live mode`, 'success');
+  } else {
+    el.innerHTML = '<span class="badge badge-amber">Credentials cleared — Sandbox mode</span>';
+    p.tsdMode = 'sandbox';
+  }
+  renderDashboard();
+}
+
+function clearTsdCreds(id) {
+  const p = DB.partners.find(x=>x.id===id);
+  p.tsdCustomer = ''; p.tsdPasscode = ''; p.tsdMode = 'sandbox';
+  toast(`${p.company} switched to Sandbox mode`, 'info');
+  openPartner(id);
+}
+
+/* ══════════════════════════════════════════════════
+   ONBOARDING FLOW
+══════════════════════════════════════════════════ */
+let obPlan = 'pro';
+
+function selectPlan(plan, el) {
+  obPlan = plan;
+  document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  const quotas = { starter: {rpm:60,rpd:1000,quota:1000}, pro:{rpm:60,rpd:5000,quota:50000}, enterprise:{rpm:300,rpd:50000,quota:0} };
+  const q = quotas[plan];
+  document.getElementById('ob-rpm').value = q.rpm;
+  document.getElementById('ob-rpd').value = q.rpd;
+  document.getElementById('ob-quota').value = q.quota;
+}
+
+function obNext(step) {
+  if (step === 1) {
+    const company = document.getElementById('ob-company').value.trim();
+    const email = document.getElementById('ob-email').value.trim();
+    const contact = document.getElementById('ob-contact').value.trim();
+    const biztype = document.getElementById('ob-biztype').value;
+    if (!company || !email || !contact || !biztype) { toast('Please fill all required fields', 'error'); return; }
+    DB.obState = {...DB.obState, company, email, contact, biztype,
+      phone: document.getElementById('ob-phone').value,
+      website: document.getElementById('ob-website').value,
+      desc: document.getElementById('ob-desc').value
+    };
+  }
+  if (step === 2) {
+    DB.obState = {...DB.obState, plan: obPlan,
+      rpm: parseInt(document.getElementById('ob-rpm').value),
+      rpd: parseInt(document.getElementById('ob-rpd').value),
+      quota: parseInt(document.getElementById('ob-quota').value),
+      endpoints: document.getElementById('ob-endpoints').value
+    };
+  }
+  if (step === 3) {
+    DB.obState = {...DB.obState,
+      tsdCust: document.getElementById('ob-tsd-cust').value.trim(),
+      tsdPass: document.getElementById('ob-tsd-pass').value.trim(),
+      tsdTp: document.getElementById('ob-tsd-tp').value,
+      tsdUrl: document.getElementById('ob-tsd-url').value
+    };
+  }
+
+  showObStep(step + 1);
+  if (step + 1 === 4) buildObReview();
+}
+
+function obBack(step) { showObStep(step - 1); }
+
+function showObStep(n) {
+  for (let i=1;i<=4;i++) {
+    const el = document.getElementById(`ob-step-${i}`);
+    if (el) el.style.display = i===n ? 'block' : 'none';
+    const nav = document.getElementById(`ob-nav-${i}`);
+    if (nav) { nav.classList.remove('active','done'); if (i===n) nav.classList.add('active'); else if (i<n) nav.classList.add('done'); }
+    const line = document.getElementById(`ob-line-${i}`);
+    if (line) line.classList.toggle('done', i < n);
+  }
+  document.getElementById('ob-step-success').style.display = 'none';
+}
+
+function buildObReview() {
+  const s = DB.obState;
+  document.getElementById('ob-review-content').innerHTML = `
+    <div class="section-label mb-sm">Company</div>
+    <div class="grid-2 mb-md">
+      <div><label class="form-label">Name</label><div class="text-sm">${s.company}</div></div>
+      <div><label class="form-label">Type</label><div class="text-sm">${s.biztype}</div></div>
+      <div><label class="form-label">Contact</label><div class="text-sm">${s.contact} · ${s.email}</div></div>
+      <div><label class="form-label">Website</label><div class="text-sm">${s.website||'—'}</div></div>
+    </div>
+    <div class="divider"></div>
+    <div class="section-label mb-sm">Plan</div>
+    <div class="grid-2 mb-md">
+      <div><label class="form-label">Plan</label><span class="badge badge-${s.plan==='enterprise'?'violet':s.plan==='pro'?'blue':'gray'}">${s.plan}</span></div>
+      <div><label class="form-label">Quota</label><div class="text-sm">${s.quota>0?s.quota.toLocaleString()+' calls/mo':'Unlimited'}</div></div>
+      <div><label class="form-label">Rate Limits</label><div class="text-sm">${s.rpm} req/min · ${s.rpd.toLocaleString()} req/day</div></div>
+    </div>
+    <div class="divider"></div>
+    <div class="section-label mb-sm">TSD Integration</div>
+    <div class="grid-2">
+      <div><label class="form-label">Mode</label><span class="badge badge-${s.tsdCust?'cyan':'amber'}">${s.tsdCust?'LIVE':'SANDBOX'}</span></div>
+      <div><label class="form-label">Customer #</label><div class="text-sm">${s.tsdCust||'Not provided (Sandbox)'}</div></div>
+    </div>
+  `;
+}
+
+async function activatePartner() {
+  if (!document.getElementById('ob-tos').checked) { toast('Please confirm the MSA has been signed', 'error'); return; }
+
+  const s = DB.obState;
+  const plan = s.plan;
+  const prefix = s.tsdCust ? 'rc_live_v1_' : 'rc_test_v1_';
+  const rawKey = prefix + [...Array(32)].map(()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
+
+  const newPartner = {
+    id: 'prt_' + Date.now(),
+    company: s.company, biztype: s.biztype,
+    contact: s.contact, email: s.email,
+    phone: s.phone, website: s.website,
+    plan: plan, status: 'active',
+    apiKey: rawKey,
+    apiKeyMasked: rawKey.slice(0,18)+'...'+rawKey.slice(-4),
+    rpm: s.rpm, rpd: s.rpd, quota: s.quota,
+    callsToday: 0, callsMonth: 0,
+    tsdCustomer: s.tsdCust, tsdPasscode: s.tsdCust ? '••••••••' : '',
+    tsdMode: s.tsdCust ? 'live' : 'sandbox',
+    tsdUrl: s.tsdUrl,
+    createdAt: new Date().toISOString().slice(0,10),
+    lastCall: 'Never',
+    notes: document.getElementById('ob-notes').value,
+    ipWhitelist: []
+  };
+
+  DB.partners.push(newPartner);
+  document.getElementById('partner-count-badge').textContent = DB.partners.filter(p=>p.status==='active').length;
+
+  addAuditEntry('Admin', `Onboarded new partner: ${s.company}`, newPartner.id, '10.0.0.1');
+
+  // Show success
+  for (let i=1;i<=4;i++) { const el=document.getElementById(`ob-step-${i}`); if(el) el.style.display='none'; }
+  document.querySelectorAll('.ob-step').forEach(n=>n.classList.add('done'));
+  document.querySelectorAll('.ob-line').forEach(l=>l.classList.add('done'));
+  document.getElementById('ob-step-success').style.display = 'block';
+  document.getElementById('ob-success-content').innerHTML = `
+    <div class="section-label mb-sm">Issued Credentials</div>
+    <label class="form-label">Partner ID</label><div class="key-box mb-sm"><span class="key-value">${newPartner.id}</span></div>
+    <label class="form-label">API Key (copy now)</label>
+    <div class="key-box mb-sm"><span class="key-value" id="new-partner-key">${rawKey}</span><button class="key-copy" onclick="copyKey('new-partner-key')">Copy</button></div>
+    <label class="form-label">API Endpoint</label>
+    <div class="key-box"><span class="key-value">POST https://api.rezcentral.io/v1/xml</span></div>
+    <div class="divider"></div>
+    <div class="grid-2">
+      <div><label class="form-label">Mode</label><span class="badge badge-${newPartner.tsdMode==='live'?'cyan':'amber'}">${newPartner.tsdMode.toUpperCase()}</span></div>
+      <div><label class="form-label">Plan</label><span class="badge badge-blue">${plan}</span></div>
+    </div>
+  `;
+
+  toast(`Partner "${s.company}" activated!`, 'success');
+}
+
+function resetOnboarding() {
+  DB.obState = { step:1, plan:'pro', company:'',biztype:'',contact:'',email:'',phone:'',website:'',desc:'',rpm:60,rpd:5000,quota:50000,endpoints:'all',tsdCust:'',tsdPass:'',tsdTp:'Web01',tsdUrl:'https://weblink.tsdasp.net/requests/service.svc/',notes:'' };
+  document.getElementById('ob-step-success').style.display = 'none';
+  ['ob-company','ob-biztype','ob-contact','ob-email','ob-phone','ob-website','ob-desc','ob-tsd-cust','ob-tsd-pass','ob-notes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('ob-tos').checked = false;
+  obPlan = 'pro';
+  document.querySelectorAll('.plan-card').forEach((c,i) => c.classList.toggle('selected', i===1));
+  showObStep(1);
+}
+
+/* ══════════════════════════════════════════════════
+   API PLAYGROUND
+══════════════════════════════════════════════════ */
+function initPlayground() {
+  const sel = document.getElementById('pg-partner-select');
+  sel.innerHTML = DB.partners.map(p => `<option value="${p.id}">${p.company} (${p.tsdMode})</option>`).join('');
+  updatePgPartner();
+  updatePgForm();
+}
+
+function updatePgPartner() {
+  const id = document.getElementById('pg-partner-select').value;
+  const p = DB.partners.find(x=>x.id===id);
+  if (!p) return;
+  const badge = document.getElementById('pg-mode-badge');
+  badge.className = 'badge badge-' + (p.tsdMode==='live'?'cyan':'amber');
+  badge.textContent = p.tsdMode === 'live' ? '⚡ LIVE — Proxying to TSD' : '⬡ SANDBOX — Mock Data';
+  updatePgForm();
+}
+
+const PG_FORMS = {
+  REQLOC: [
+    {id:'pg-loc-id',label:'Location ID (blank for all)',ph:'Leave blank for all'},
+    {id:'pg-hours',label:'Include Business Hours (1/0)',ph:'1'},
+  ],
+  REQRAT: [
+    {id:'pg-rat-loc',label:'Rental Location ID *',ph:'LAX01'},
+    {id:'pg-rat-pickup',label:'Pickup DateTime (MMDDYYYY hh:mm AM)',ph:'03102026 10:00 AM'},
+    {id:'pg-rat-return',label:'Return DateTime',ph:'03172026 10:00 AM'},
+    {id:'pg-rat-class',label:'Class Code (blank for all)',ph:'ECAR'},
+    {id:'pg-rat-disc',label:'Discount Code',ph:'optional'},
+    {id:'pg-rat-tp',label:'Total Pricing (1=yes)',ph:'1'},
+  ],
+  REQBIL: [
+    {id:'pg-bil-loc',label:'Rental Location ID *',ph:'LAX01'},
+    {id:'pg-bil-pickup',label:'Pickup DateTime',ph:'03102026 10:00 AM'},
+    {id:'pg-bil-return',label:'Return DateTime',ph:'03172026 10:00 AM'},
+    {id:'pg-bil-rateid',label:'Rate ID *',ph:'1003'},
+    {id:'pg-bil-class',label:'Class Code *',ph:'ICAR'},
+    {id:'pg-bil-extras',label:'Extra Codes (comma separated)',ph:'CDW,GPS'},
+  ],
+  ADDREZ: [
+    {id:'pg-add-loc',label:'Rental Location ID *',ph:'LAX01'},
+    {id:'pg-add-pickup',label:'Pickup DateTime *',ph:'03102026 10:00 AM'},
+    {id:'pg-add-return',label:'Return DateTime *',ph:'03172026 10:00 AM'},
+    {id:'pg-add-rateid',label:'Rate ID *',ph:'1003'},
+    {id:'pg-add-class',label:'Class Code *',ph:'ICAR'},
+    {id:'pg-add-first',label:'Renter First Name *',ph:'John'},
+    {id:'pg-add-last',label:'Renter Last Name *',ph:'Smith'},
+    {id:'pg-add-email',label:'Email *',ph:'john@email.com'},
+  ],
+  REQCAN: [
+    {id:'pg-can-confirm',label:'Confirmation Number *',ph:'WCV0001A01'},
+  ],
+  REQEXT: [
+    {id:'pg-ext-loc',label:'Rental Location ID *',ph:'LAX01'},
+    {id:'pg-ext-class',label:'Class Code',ph:'ICAR'},
+  ],
+  REQCLS: [
+    {id:'pg-cls-loc',label:'Rental Location ID *',ph:'LAX01'},
+    {id:'pg-cls-class',label:'Class Code (* for all)',ph:'*'},
+  ],
+  REQPOL: [
+    {id:'pg-pol-loc',label:'Rental Location ID *',ph:'LAX01'},
+  ],
+};
+
+function updatePgForm() {
+  const msgType = document.getElementById('pg-msg-type').value;
+  const fields = PG_FORMS[msgType] || [];
+  const id = document.getElementById('pg-partner-select').value;
+  const p = DB.partners.find(x=>x.id===id);
+  document.getElementById('pg-form-fields').innerHTML = fields.map(f=>`
+    <div class="form-group">
+      <label class="form-label">${f.label}</label>
+      <input class="form-input" id="${f.id}" placeholder="${f.ph}">
+    </div>`).join('');
+  buildPgReqXml(msgType, p);
+}
+
+function buildPgReqXml(msgType, partner) {
+  if (!partner) return;
+  const cust = partner.tsdCustomer || 'SANDBOX';
+  const pass = partner.tsdPasscode ? '••••••' : 'SANDBOX';
+  let payload = '';
+
+  const gv = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
+
+  if (msgType === 'REQLOC') {
+    const locId = gv('pg-loc-id');
+    payload = `  <Payload>
+${locId?`    <RentalLocationID>${locId}</RentalLocationID>\n`:''}    <BusinessHours>${gv('pg-hours')||1}</BusinessHours>
+  </Payload>`;
+  } else if (msgType === 'REQRAT') {
+    const cls = gv('pg-rat-class');
+    const disc = gv('pg-rat-disc');
+    payload = `  <Payload>
+    <RentalLocationID>${gv('pg-rat-loc')||'LAX01'}</RentalLocationID>
+    <ReturnLocationID>${gv('pg-rat-loc')||'LAX01'}</ReturnLocationID>
+    <PickupDateTime>${gv('pg-rat-pickup')||'03102026 10:00 AM'}</PickupDateTime>
+    <ReturnDateTime>${gv('pg-rat-return')||'03172026 10:00 AM'}</ReturnDateTime>
+${cls?`    <ClassCode>${cls}</ClassCode>\n`:''}${disc?`    <DiscountCode>${disc}</DiscountCode>\n`:''}    <TotalPricing>${gv('pg-rat-tp')||1}</TotalPricing>
+    <RateSource>WEB</RateSource>
+  </Payload>`;
+  } else if (msgType === 'REQBIL') {
+    const extras = gv('pg-bil-extras').split(',').filter(Boolean).map(e=>`    <ExtraCode>${e.trim()}</ExtraCode>`).join('\n');
+    payload = `  <PayLoad>
+    <RentalLocationID>${gv('pg-bil-loc')||'LAX01'}</RentalLocationID>
+    <PickupDateTime>${gv('pg-bil-pickup')||'03102026 10:00 AM'}</PickupDateTime>
+    <ReturnDateTime>${gv('pg-bil-return')||'03172026 10:00 AM'}</ReturnDateTime>
+    <RateID>${gv('pg-bil-rateid')||1003}</RateID>
+    <ClassCode>${gv('pg-bil-class')||'ICAR'}</ClassCode>
+    <RateSource>WEB</RateSource>
+${extras}
+  </PayLoad>`;
+  } else if (msgType === 'ADDREZ') {
+    payload = `  <Payload>
+    <PickupDateTime>${gv('pg-add-pickup')||'03102026 10:00 AM'}</PickupDateTime>
+    <ReturnDateTime>${gv('pg-add-return')||'03172026 10:00 AM'}</ReturnDateTime>
+    <RentalLocationID>${gv('pg-add-loc')||'LAX01'}</RentalLocationID>
+    <RateID>${gv('pg-add-rateid')||1003}</RateID>
+    <ClassCode>${gv('pg-add-class')||'ICAR'}</ClassCode>
+    <RenterFirstName>${gv('pg-add-first')||'John'}</RenterFirstName>
+    <RenterLastName>${gv('pg-add-last')||'Smith'}</RenterLastName>
+    <EmailAddress>${gv('pg-add-email')||'john@email.com'}</EmailAddress>
+    <TermsAndConditions>Y</TermsAndConditions>
+    <TotalPricing>1</TotalPricing>
+  </Payload>`;
+  } else if (msgType === 'REQCAN') {
+    payload = `  <Payload>
+    <ConfirmNum>${gv('pg-can-confirm')||'WCV0001A01'}</ConfirmNum>
+  </Payload>`;
+  } else if (msgType === 'REQEXT') {
+    payload = `  <Payload>
+    <RentalLocationID>${gv('pg-ext-loc')||'LAX01'}</RentalLocationID>
+${gv('pg-ext-class')?`    <ClassCode>${gv('pg-ext-class')}</ClassCode>\n`:''}  </Payload>`;
+  } else if (msgType === 'REQCLS') {
+    payload = `  <Payload>
+    <RentalLocationID>${gv('pg-cls-loc')||'LAX01'}</RentalLocationID>
+    <ClassCode>${gv('pg-cls-class')||'*'}</ClassCode>
+  </Payload>`;
+  } else if (msgType === 'REQPOL') {
+    payload = `  <Payload>
+    <RentalLocationID>${gv('pg-pol-loc')||'LAX01'}</RentalLocationID>
+  </Payload>`;
+  }
+
+  const xml = `${xmlHeader(cust, pass, 'WEB01', 'Web01')}
+  <Message>
+    <MessageID>${msgType}</MessageID>
+  </Message>
+${payload}
+</TRNXML>`;
+
+  document.getElementById('pg-req-xml').innerHTML = colorXml(xml);
+  window._pgReqRaw = xml;
+}
+
+document.addEventListener('input', (e) => {
+  if (e.target.closest('#pg-form-fields')) {
+    const msgType = document.getElementById('pg-msg-type')?.value;
+    const id = document.getElementById('pg-partner-select')?.value;
+    const p = DB.partners.find(x=>x.id===id);
+    if (msgType && p) buildPgReqXml(msgType, p);
+  }
+});
+
+async function sendPgRequest() {
+  const id = document.getElementById('pg-partner-select').value;
+  const partner = DB.partners.find(x=>x.id===id);
+  const msgType = document.getElementById('pg-msg-type').value;
+  if (!partner) return;
+
+  buildPgReqXml(msgType, partner);
+
+  document.getElementById('pg-res-xml').innerHTML = '<span class="xc">// Sending request...</span>';
+  document.getElementById('pg-status-badge').className = 'badge badge-gray';
+  document.getElementById('pg-status-badge').textContent = 'Pending...';
+  document.getElementById('pg-time').textContent = '—';
+  document.getElementById('pg-metered').textContent = '—';
+
+  const start = Date.now();
+  const delay = partner.tsdMode === 'live' ? 300 + Math.random()*200 : DB.mockDelay + Math.random()*400;
+  await sleep(delay);
+  const elapsed = Math.round(Date.now() - start);
+
+  // Meter this call
+  partner.callsToday++;
+  partner.callsMonth++;
+  partner.lastCall = 'just now';
+
+  // Add to log
+  addLog(partner.company, msgType, 200, elapsed);
+
+  const resXml = buildMockResponse(msgType, partner);
+  document.getElementById('pg-res-xml').innerHTML = colorXml(resXml);
+  window._pgResRaw = resXml;
+
+  document.getElementById('pg-status-badge').className = 'badge badge-green';
+  document.getElementById('pg-status-badge').textContent = '200 OK';
+  document.getElementById('pg-time').textContent = elapsed + 'ms';
+  document.getElementById('pg-metered').textContent = `Call #${partner.callsToday} today`;
+}
+
+function copyPgReq() { copyText(window._pgReqRaw||''); }
+function copyPgRes() { copyText(window._pgResRaw||''); }
+
+/* ══════════════════════════════════════════════════
+   MOCK RESPONSES
+══════════════════════════════════════════════════ */
+function buildMockResponse(msgType, partner) {
+  const rsp = { REQLOC:'RSPLOC', REQRAT:'RSPRAT', REQBIL:'RSPBIL', ADDREZ:'RSPREZ', REQCAN:'RSPCAN', REQEXT:'RSPEXT', REQCLS:'RSPCLS', REQPOL:'RSPPOL' }[msgType]||'RSPUNK';
+  const header = `<TRNXML Version="1.0.0">
+  <Message>
+    <MessageID>${rsp}</MessageID>`;
+
+  if (msgType === 'REQLOC') return header + `
+    <MessageDescription>Respond with locations</MessageDescription>
+  </Message>
+  <Payload>
+    <RentalLocation>
+      <RentalLocationID>LAX01</RentalLocationID>
+      <RentalLocationStatus>Active</RentalLocationStatus>
+      <RentalLocationType>Corporate</RentalLocationType>
+      <RentalLocationName>Los Angeles International</RentalLocationName>
+      <RentalLocationPhone>(310) 555-0101</RentalLocationPhone>
+      <AirportIndicator>1</AirportIndicator>
+      <Address>1 World Way, Los Angeles, CA 90045</Address>
+    </RentalLocation>
+    <RentalLocation>
+      <RentalLocationID>SFO01</RentalLocationID>
+      <RentalLocationStatus>Active</RentalLocationStatus>
+      <RentalLocationType>Corporate</RentalLocationType>
+      <RentalLocationName>San Francisco Airport</RentalLocationName>
+      <RentalLocationPhone>(650) 555-0202</RentalLocationPhone>
+      <AirportIndicator>1</AirportIndicator>
+      <Address>780 McDonnell Rd, San Francisco, CA 94128</Address>
+    </RentalLocation>
+  </Payload>
+</TRNXML>`;
+
+  if (msgType === 'REQRAT') return header + `
+    <MessageDescription>Respond with rates</MessageDescription>
+  </Message>
+  <Payload>
+    <Rate>
+      <RateID>1003</RateID>
+      <ClassCode>ICAR</ClassCode>
+      <RateCode>BWKD</RateCode>
+      <RateName>Intermediate Base Weekly</RateName>
+      <DailyRate>44.99</DailyRate>
+      <WeeklyRate>214.99</WeeklyRate>
+      <TotalPricing>
+        <RentalDays>7</RentalDays>
+        <RateCharge>314.93</RateCharge>
+        <Surcharge>5.89</Surcharge>
+        <TotalTaxes>47.24</TotalTaxes>
+        <TotalCharges>368.06</TotalCharges>
+      </TotalPricing>
+    </Rate>
+    <Rate>
+      <RateID>1004</RateID>
+      <ClassCode>SCAR</ClassCode>
+      <RateCode>BWKD</RateCode>
+      <RateName>Standard Base Weekly</RateName>
+      <DailyRate>49.99</DailyRate>
+      <WeeklyRate>239.99</WeeklyRate>
+    </Rate>
+  </Payload>
+</TRNXML>`;
+
+  if (msgType === 'REQBIL') return header + `
+    <MessageDescription>Respond With Charges</MessageDescription>
+  </Message>
+  <Payload>
+    <CurrencyCode>USD</CurrencyCode>
+    <TotalPricing>
+      <RentalDays>7</RentalDays>
+      <RateCharge>314.93</RateCharge>
+      <Surcharge>5.89</Surcharge>
+      <TotalTaxes>47.24</TotalTaxes>
+      <TotalExtras>126.00</TotalExtras>
+      <TotalCharges>494.06</TotalCharges>
+      <DailyExtra>
+        <ExtraCode>CDW</ExtraCode>
+        <ExtraDesc>COLLISION DAMAGE WAIVER</ExtraDesc>
+        <ExtraAmount>132.93</ExtraAmount>
+      </DailyExtra>
+    </TotalPricing>
+  </Payload>
+</TRNXML>`;
+
+  if (msgType === 'ADDREZ') {
+    const conf = 'WCV' + [...Array(7)].map(()=>'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random()*36)]).join('');
+    return header + `
+    <MessageDescription>Confirmation# ${conf}</MessageDescription>
+  </Message>
+  <Payload>
+    <ConfirmNum>${conf}</ConfirmNum>
+    <ReservationStatus>ACTIVE</ReservationStatus>
+    <TSDNumber>${partner.tsdCustomer||'SANDBOX'}</TSDNumber>
+    <TotalCharges>368.06</TotalCharges>
+  </Payload>
+</TRNXML>`;
+  }
+
+  if (msgType === 'REQCAN') return header + `
+    <MessageDescription>Confirmation# canceled</MessageDescription>
+  </Message>
+</TRNXML>`;
+
+  if (msgType === 'REQEXT') return header + `
+    <MessageDescription>Respond with extras</MessageDescription>
+  </Message>
+  <Payload>
+    <DailyExtra>
+      <ExtraCode>CDW</ExtraCode>
+      <ExtraDesc>COLLISION DAMAGE WAIVER</ExtraDesc>
+      <ExtraAmount>18.99</ExtraAmount>
+      <ExtraCalcType>DAILY</ExtraCalcType>
+    </DailyExtra>
+    <DailyExtra>
+      <ExtraCode>GPS</ExtraCode>
+      <ExtraDesc>GPS NAVIGATION</ExtraDesc>
+      <ExtraAmount>7.99</ExtraAmount>
+      <ExtraCalcType>DAILY</ExtraCalcType>
+    </DailyExtra>
+  </Payload>
+</TRNXML>`;
+
+  if (msgType === 'REQCLS') return header + `
+    <MessageDescription>Respond With Vehicle Classes</MessageDescription>
+  </Message>
+  <Payload>
+    <VehicleClass>
+      <ClassCode>ICAR</ClassCode>
+      <ClassDescription>Intermediate Car</ClassDescription>
+      <PassengerCount>5</PassengerCount>
+      <LuggageCount>2</LuggageCount>
+      <CardRequired>True</CardRequired>
+    </VehicleClass>
+  </Payload>
+</TRNXML>`;
+
+  return header + `\n    <MessageDescription>OK</MessageDescription>\n  </Message>\n</TRNXML>`;
+}
+
+/* ══════════════════════════════════════════════════
+   ENDPOINTS CATALOG
+══════════════════════════════════════════════════ */
+const ENDPOINTS = [
+  { id:'REQLOC', rsp:'RSPLOC', desc:'Request list of rental locations. First call in any booking flow.', method:'POST', mandatory:['CustomerNumber','Passcode'], optional:['RentalLocationID','BusinessHours','ChainCode'], badge:'blue' },
+  { id:'REQRAT', rsp:'RSPRAT', desc:'Request available rates for a date range and vehicle class.', method:'POST', mandatory:['RentalLocationID','PickupDateTime','ReturnDateTime'], optional:['ClassCode','DiscountCode','RateSource','TotalPricing','Prepaid'], badge:'blue' },
+  { id:'REQBIL', rsp:'RSPBIL', desc:'Request estimated bill for specific rate/reservation parameters.', method:'POST', mandatory:['RentalLocationID','PickupDateTime','ReturnDateTime','RateID','ClassCode'], optional:['ExtraCode','DiscountCode','Prepaid','ConfirmNum'], badge:'cyan' },
+  { id:'ADDREZ', rsp:'RSPREZ', desc:'Create or modify a reservation. Returns confirmation number.', method:'POST', mandatory:['RentalLocationID','PickupDateTime','ReturnDateTime','RateID','ClassCode'], optional:['ConfirmNum (modify)','ExtraCode','TermsAndConditions','TotalPricing'], badge:'green' },
+  { id:'REQCAN', rsp:'RSPCAN', desc:'Cancel an existing reservation by confirmation number.', method:'POST', mandatory:['ConfirmNum'], optional:[], badge:'red' },
+  { id:'REQEXT', rsp:'RSPEXT', desc:'Request list of optional services (extras) for a location.', method:'POST', mandatory:['RentalLocationID'], optional:['ClassCode','RateID'], badge:'blue' },
+  { id:'REQCLS', rsp:'RSPCLS', desc:'Request vehicle class details including images and capacity.', method:'POST', mandatory:['RentalLocationID','ClassCode'], optional:['CompanyNumber'], badge:'blue' },
+  { id:'REQPOL', rsp:'RSPPOL', desc:'Request rental policies (age restrictions, deposit rules, etc).', method:'POST', mandatory:['RentalLocationID'], optional:[], badge:'blue' },
+  { id:'REQREZ', rsp:'RSPREZ', desc:'Retrieve full reservation details by confirmation number.', method:'POST', mandatory:['ConfirmNum'], optional:[], badge:'cyan' },
+  { id:'REQLAS', rsp:'RSPLAS', desc:'Loyalty program account lookup by ID or email.', method:'POST', mandatory:['LoyaltyID or EmailAddress'], optional:[], badge:'violet' },
+];
+
+function renderEndpoints() {
+  document.getElementById('endpoint-list').innerHTML = ENDPOINTS.map(e => `
+    <div class="card mb-md">
+      <div class="flex justify-between items-center mb-sm">
+        <div class="flex gap-sm items-center">
+          <span class="badge badge-${e.badge}" style="font-size:0.75rem;padding:4px 12px;">${e.id}</span>
+          <span style="color:var(--text3);font-size:0.68rem;">→ ${e.rsp}</span>
+          <span class="badge badge-green">${e.method}</span>
+        </div>
+        <button class="btn btn-sm btn-ghost" onclick="document.getElementById('pg-msg-type').value='${e.id}';showView('playground');">Try in Playground →</button>
+      </div>
+      <p class="text-xs text-muted mb-md">${e.desc}</p>
+      <div class="flex gap-lg" style="flex-wrap:wrap;">
+        <div>
+          <div class="form-label mb-sm">Mandatory Fields</div>
+          <div class="flex gap-sm" style="flex-wrap:wrap;">
+            ${e.mandatory.map(f=>`<span class="badge badge-red">${f}</span>`).join('')}
+          </div>
+        </div>
+        ${e.optional.length > 0 ? `<div>
+          <div class="form-label mb-sm">Optional Fields</div>
+          <div class="flex gap-sm" style="flex-wrap:wrap;">
+            ${e.optional.map(f=>`<span class="badge badge-gray">${f}</span>`).join('')}
+          </div>
+        </div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ══════════════════════════════════════════════════
+   LIVE LOGS
+══════════════════════════════════════════════════ */
+const LOG_ENTRIES = [];
+function addLog(company, endpoint, status, ms) {
+  LOG_ENTRIES.unshift({ time: nowStr(), company, endpoint, status, ms });
+  if (LOG_ENTRIES.length > 200) LOG_ENTRIES.pop();
+}
+
+function renderLogStream(elId, limit=50) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const entries = LOG_ENTRIES.slice(0, limit);
+  if (entries.length === 0) { el.innerHTML = '<span class="xc">// No logs yet — send requests to see activity...</span>'; return; }
+  el.innerHTML = entries.map(l =>
+    `<div class="log-line">
+      <span class="log-time">${l.time}</span>
+      <span class="log-method POST">POST</span>
+      <span class="log-path">/v1/xml → <span style="color:var(--cyan);">${l.endpoint}</span> · ${l.company}</span>
+      <span class="log-status"><span class="badge badge-${l.status===200?'green':'red'}">${l.status}</span></span>
+      <span class="log-ms">${l.ms}ms</span>
+    </div>`
+  ).join('');
+}
+
+function renderLogs() {
+  renderLogStream('live-log-stream', 80);
+
+  document.getElementById('log-filter-partner').innerHTML = `<option value="">All Partners</option>` +
+    DB.partners.map(p=>`<option value="${p.id}">${p.company}</option>`).join('');
+
+  document.getElementById('error-summary-table').innerHTML = [
+    { code:'NO RATES AVAILABLE', msg:'No rates found for requested parameters', count:3, last:'14:22:01', partner:'DriveTest Labs' },
+    { code:'INVALID DATES', msg:'Return date must be after pickup date', count:7, last:'11:45:18', partner:'Velocity Car Hire' },
+  ].map(e=>`<tr>
+    <td><span class="badge badge-red">${e.code}</span></td>
+    <td class="cell-primary">${e.msg}</td>
+    <td><span class="text-amber fw-bold">${e.count}</span></td>
+    <td class="text-muted">${e.last}</td>
+    <td>${e.partner}</td>
+  </tr>`).join('');
+}
+
+function clearLogs() { LOG_ENTRIES.length = 0; renderLogStream('live-log-stream',80); }
+
+/* ══════════════════════════════════════════════════
+   USAGE VIEW
+══════════════════════════════════════════════════ */
+function renderUsage() {
+  document.getElementById('usage-partner-list').innerHTML = DB.partners.map(p => {
+    const pct = p.quota > 0 ? Math.min(100, Math.round(p.callsMonth/p.quota*100)) : 0;
+    return `
+    <div class="card mb-md">
+      <div class="flex justify-between items-center mb-md">
+        <div>
+          <div style="font-family:'Clash Display',sans-serif;font-size:1rem;font-weight:700;">${p.company}</div>
+          <div class="text-xs text-muted">${p.plan} plan · ID: ${p.id}</div>
+        </div>
+        <div class="flex gap-sm items-center">
+          <span class="badge badge-${p.tsdMode==='live'?'cyan':'amber'}">${p.tsdMode}</span>
+          <span class="badge badge-${p.status==='active'?'green':'amber'}">${p.status}</span>
+        </div>
+      </div>
+      <div class="grid-4 mb-md">
+        <div class="stat-tile"><div class="stat-label">Today</div><div class="stat-value blue" style="font-size:1.2rem;">${p.callsToday.toLocaleString()}</div></div>
+        <div class="stat-tile"><div class="stat-label">This Month</div><div class="stat-value cyan" style="font-size:1.2rem;">${p.callsMonth.toLocaleString()}</div></div>
+        <div class="stat-tile"><div class="stat-label">Monthly Quota</div><div class="stat-value ${pct>80?'amber':'green'}" style="font-size:1.2rem;">${p.quota>0?p.quota.toLocaleString():'∞'}</div></div>
+        <div class="stat-tile"><div class="stat-label">Rate Limit</div><div class="stat-value" style="font-size:1.2rem;">${p.rpm}<span style="font-size:0.7rem;">/min</span></div></div>
+      </div>
+      ${p.quota > 0 ? `<div class="usage-bar-wrap">
+        <div class="usage-bar-header"><span class="usage-bar-label">Monthly Quota Usage</span><span class="usage-bar-val">${pct}% · ${p.callsMonth.toLocaleString()} of ${p.quota.toLocaleString()}</span></div>
+        <div class="usage-bar-track"><div class="usage-bar-fill ${pct>80?'warn':''} ${pct>=100?'over':''}" style="height:8px;width:${pct}%;border-radius:4px;"></div></div>
+      </div>` : '<div class="highlight-box text-xs text-cyan">Unlimited plan — no quota restrictions</div>'}
+    </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════════
+   SECURITY
+══════════════════════════════════════════════════ */
+const AUDIT_LOG = [
+  { ts:'2026-03-03 14:01', actor:'Admin', action:'Rotated API key', target:'Velocity Car Hire', ip:'10.0.0.1' },
+  { ts:'2026-03-03 11:30', actor:'Admin', action:'Onboarded partner', target:'DriveTest Labs', ip:'10.0.0.1' },
+  { ts:'2026-03-02 09:15', actor:'System', action:'Rate limit triggered', target:'TravelNest OTA', ip:'104.21.0.5' },
+];
+
+function addAuditEntry(actor, action, target, ip) {
+  AUDIT_LOG.unshift({ ts: new Date().toISOString().slice(0,16).replace('T',' '), actor, action, target, ip });
+}
+
+function renderSecurity() {
+  document.getElementById('security-alerts').innerHTML = `
+    <div class="card mb-sm" style="border-color:rgba(245,158,11,0.3);">
+      <div class="flex justify-between items-center">
+        <div><div class="text-sm fw-bold text-amber">⚠ Unusual Activity</div><div class="text-xs text-muted">TravelNest OTA hit rate limit 3x in 1hr</div></div>
+        <button class="btn btn-sm btn-ghost">Investigate</button>
+      </div>
+    </div>
+    <div class="card" style="border-color:rgba(245,158,11,0.3);">
+      <div class="flex justify-between items-center">
+        <div><div class="text-sm fw-bold text-amber">⚠ Unverified IP</div><div class="text-xs text-muted">New IP 203.0.113.99 from DriveTest Labs</div></div>
+        <button class="btn btn-sm btn-ghost">Review</button>
+      </div>
+    </div>`;
+
+  renderIPList();
+  renderAuditTable();
+}
+
+function renderIPList() {
+  document.getElementById('ip-list').innerHTML = DB.ipWhitelist.map((ip,i)=>`
+    <div class="key-box" style="margin-bottom:4px;">
+      <span class="key-value">${ip}</span>
+      <button class="key-copy" onclick="removeIP(${i})">Remove</button>
+    </div>`).join('');
+}
+
+function addIP() {
+  const ip = document.getElementById('new-ip').value.trim();
+  if (!ip) return;
+  DB.ipWhitelist.push(ip);
+  document.getElementById('new-ip').value = '';
+  renderIPList();
+  toast('IP added to whitelist', 'success');
+}
+function removeIP(i) { DB.ipWhitelist.splice(i,1); renderIPList(); }
+
+function renderAuditTable() {
+  document.getElementById('audit-table').innerHTML = AUDIT_LOG.map(e=>`<tr>
+    <td class="text-muted">${e.ts}</td>
+    <td class="cell-primary">${e.actor}</td>
+    <td>${e.action}</td>
+    <td class="text-cyan">${e.target}</td>
+    <td class="text-muted">${e.ip}</td>
+  </tr>`).join('');
+}
+
+/* ══════════════════════════════════════════════════
+   TSD CONFIG
+══════════════════════════════════════════════════ */
+function renderTsdConfig() {
+  document.getElementById('tsd-creds-table').innerHTML = DB.partners.map(p=>`<tr>
+    <td class="cell-primary">${p.company}</td>
+    <td>${p.tsdCustomer||'<span class="text-muted">—</span>'}</td>
+    <td><span class="badge badge-${p.tsdMode==='live'?'cyan':'amber'}">${p.tsdMode}</span></td>
+    <td class="text-muted">3 min ago</td>
+    <td><button class="btn btn-sm btn-ghost" onclick="openPartner('${p.id}');switchTabDirect('pm','tsd');">Edit</button></td>
+  </tr>`).join('');
+}
+
+async function testGlobalTSD() {
+  const el = document.getElementById('tsd-test-result');
+  el.innerHTML = '<span class="text-muted text-xs">Testing...</span>';
+  await sleep(1500);
+  el.innerHTML = '<span class="badge badge-green">✓ Connected — 142ms</span>';
+}
+
+function saveMockConfig() {
+  DB.mockDelay = parseInt(document.getElementById('mock-delay').value)||800;
+  DB.mockErrRate = parseInt(document.getElementById('mock-err-rate').value)||2;
+  toast('Sandbox config saved', 'success');
+}
+
+/* ══════════════════════════════════════════════════
+   LOG SIMULATION
+══════════════════════════════════════════════════ */
+const SIMULATED_CALLS = [
+  ['Velocity Car Hire','REQLOC'],['TravelNest OTA','REQRAT'],['TravelNest OTA','ADDREZ'],
+  ['Velocity Car Hire','REQBIL'],['DriveTest Labs','REQLOC'],['TravelNest OTA','REQRAT'],
+  ['Velocity Car Hire','REQEXT'],['TravelNest OTA','REQCAN'],['DriveTest Labs','REQRAT'],
+  ['TravelNest OTA','ADDREZ'],['Velocity Car Hire','REQCLS'],['TravelNest OTA','REQBIL'],
+];
+let simIdx = 0;
+setInterval(() => {
+  const [company, endpoint] = SIMULATED_CALLS[simIdx % SIMULATED_CALLS.length];
+  simIdx++;
+  const p = DB.partners.find(x=>x.company===company);
+  if (p) { p.callsToday++; p.callsMonth++; p.lastCall = 'just now'; }
+  const status = Math.random() > 0.03 ? 200 : 429;
+  addLog(company, endpoint, status, Math.round(120+Math.random()*300));
+  if (document.getElementById('view-logs').classList.contains('active')) renderLogStream('live-log-stream',80);
+  if (document.getElementById('view-dashboard').classList.contains('active')) {
+    renderLogStream('dashboard-log-stream',12);
+    const calls = parseInt(document.getElementById('stat-calls').textContent.replace(/,/g,''));
+    document.getElementById('stat-calls').textContent = (calls+1).toLocaleString();
+  }
+}, 2800);
+
+/* ══════════════════════════════════════════════════
+   UTILITIES
+══════════════════════════════════════════════════ */
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+function toast(msg, type='info') {
+  const icons = { success:'✓', error:'✕', info:'ℹ' };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span class="toast-icon">${icons[type]||'●'}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>el.remove(), 3500);
+}
+
+function copyKey(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  copyText(el.textContent);
+}
+function copyText(txt) {
+  navigator.clipboard.writeText(txt).then(()=>toast('Copied to clipboard','success')).catch(()=>toast('Copy failed','error'));
+}
+
+/* ══════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  // Seed some log entries
+  SIMULATED_CALLS.forEach(([company, endpoint], i) => {
+    addLog(company, endpoint, 200, Math.round(100+Math.random()*300));
+  });
+  renderDashboard();
+});
+</script>
+</body>
+</html>
